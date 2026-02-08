@@ -1,0 +1,53 @@
+package device
+
+import (
+	"context"
+	"time"
+)
+
+// StartHealthChecker periodically checks for dead sessions and cleans them up.
+// It also polls ADB for newly connected/disconnected devices.
+// Returns a cancel function to stop the goroutine.
+func (m *Manager) StartHealthChecker(interval time.Duration) context.CancelFunc {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				m.cleanupDeadSessions()
+			}
+		}
+	}()
+
+	m.logger.Info("session health checker started", "interval", interval.String())
+	return cancel
+}
+
+// cleanupDeadSessions finds sessions that are no longer alive and removes them.
+func (m *Manager) cleanupDeadSessions() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	for serial, session := range m.sessions {
+		if !session.IsAlive() {
+			m.logger.Warn("cleaning up dead session", "serial", serial)
+			session.Close()
+			delete(m.sessions, serial)
+			delete(m.sessionTiers, serial)
+			delete(m.fullViewers, serial)
+		}
+	}
+}
+
+// ActiveSessionCount returns the number of active sessions.
+func (m *Manager) ActiveSessionCount() int {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return len(m.sessions)
+}

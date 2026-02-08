@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: batter
+      POSTGRES_PASSWORD: batter
+      POSTGRES_DB: batter
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U batter"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  batter:
+    build: .
+    ports:
+      - "8080:8080"
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgres://batter:batter@postgres:5432/batter?sslmode=disable
+      JWT_SECRET: change-me-in-production
+      ALLOWED_ORIGINS: http://localhost:3000
+      FRONTEND_URL: http://localhost:3000
+      PORT: "8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    privileged: true
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    restart: unless-stopped
+
+volumes:
+  pgdata:
