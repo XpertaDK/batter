@@ -6,15 +6,19 @@ import { DeviceCard } from './device-card';
 interface DeviceGridProps {
   devices: DeviceInfo[];
   onDeviceClick: (serial: string) => void;
+  onEdit?: (serial: string) => void;
+  onDelete?: (serial: string) => void;
 }
 
-export function DeviceGrid({ devices, onDeviceClick }: DeviceGridProps) {
+export function DeviceGrid({ devices, onDeviceClick, onEdit, onDelete }: DeviceGridProps) {
   if (devices.length === 0) {
     return (
       <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="text-gray-500 text-sm">No devices connected</div>
-          <div className="text-gray-600 text-xs mt-1">Connect phones via USB with USB debugging enabled</div>
+          <div className="text-gray-500 text-sm">No devices registered</div>
+          <div className="text-gray-600 text-xs mt-1">
+            Click &apos;Add Device&apos; to register your first phone.
+          </div>
         </div>
       </div>
     );
@@ -27,6 +31,8 @@ export function DeviceGrid({ devices, onDeviceClick }: DeviceGridProps) {
           key={device.serial}
           device={device}
           onClick={() => onDeviceClick(device.serial)}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>

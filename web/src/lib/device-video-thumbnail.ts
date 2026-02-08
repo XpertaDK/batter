@@ -72,7 +72,9 @@ export class DeviceThumbnailPlayer {
         frame.close();
       },
       error: () => {
-        this.onStatusChange?.("decoder-error");
+        // Decoder hit a fatal error — reset and reconfigure on next keyframe
+        this.configured = false;
+        this.initDecoder();
       },
     });
   }
@@ -149,8 +151,14 @@ export class DeviceThumbnailPlayer {
     desc[o++] = 1; desc[o++] = (this.pps.length >> 8) & 0xff; desc[o++] = this.pps.length & 0xff;
     desc.set(this.pps, o);
 
+    // Derive codec string from SPS: avc1.PPCCLL
+    const profile = this.sps[1].toString(16).padStart(2, '0');
+    const compat = this.sps[2].toString(16).padStart(2, '0');
+    const level = this.sps[3].toString(16).padStart(2, '0');
+    const codec = `avc1.${profile}${compat}${level}`;
+
     try {
-      this.decoder.configure({ codec: "avc1.640028", description: desc, optimizeForLatency: true });
+      this.decoder.configure({ codec, description: desc, optimizeForLatency: true });
       this.configured = true;
       this.onStatusChange?.("streaming");
     } catch {

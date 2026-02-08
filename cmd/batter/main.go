@@ -41,9 +41,10 @@ func main() {
 
 	// Initialize device manager
 	dm, err := device.NewManager(device.ManagerConfig{
-		ScrcpyServerPath: cfg.ScrcpyServerPath,
-		ScrcpyVersion:    cfg.ScrcpyVersion,
-		Logger:           logger,
+		ScrcpyServerPath:   cfg.ScrcpyServerPath,
+		ScrcpyVersion:      cfg.ScrcpyVersion,
+		ScreenshotCacheDir: cfg.DataDir,
+		Logger:             logger,
 	})
 	if err != nil {
 		logger.Error("failed to initialize device manager", "error", err)

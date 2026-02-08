@@ -101,12 +101,26 @@ export async function logout() {
 export interface DeviceInfo {
   serial: string;
   state: string;
+  status: 'connected' | 'disconnected' | 'offline' | 'unauthorized';
   model: string;
   product: string;
+  nickname?: string;
+  android_version?: string;
   has_session: boolean;
   width?: number;
   height?: number;
   session_tier?: 'thumbnail' | 'full';
+  last_seen_at?: string;
+}
+
+export async function fetchScreenshot(serial: string): Promise<Blob | null> {
+  try {
+    const res = await fetchWithAuth(`/api/v1/devices/${encodeURIComponent(serial)}/screenshot`);
+    if (!res.ok) return null;
+    return await res.blob();
+  } catch {
+    return null;
+  }
 }
 
 export async function listDevices(): Promise<DeviceInfo[]> {
@@ -169,6 +183,82 @@ export async function wakeDevice(serial: string) {
 export async function getDeviceHealth() {
   const res = await fetchWithAuth('/api/v1/devices/health');
   if (!res.ok) throw new Error('Failed to get health');
+  return res.json();
+}
+
+export async function discoverDevices(): Promise<DeviceInfo[]> {
+  const res = await fetchWithAuth('/api/v1/devices/discover');
+  if (!res.ok) throw new Error('Failed to discover devices');
+  const data = await res.json();
+  return data.devices;
+}
+
+export async function registerDevice(serial: string, nickname?: string) {
+  const res = await fetchWithAuth('/api/v1/devices', {
+    method: 'POST',
+    body: JSON.stringify({ serial, nickname }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to register device');
+  }
+  return res.json();
+}
+
+export async function validateDevice(serial: string): Promise<{ serial: string; reachable: boolean; state: string; error?: string }> {
+  const res = await fetchWithAuth(`/api/v1/devices/validate/${encodeURIComponent(serial)}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to validate device');
+  return res.json();
+}
+
+export async function probeDevice(serial: string): Promise<{ serial: string; model: string; product: string; android_version: string }> {
+  const res = await fetchWithAuth(`/api/v1/devices/probe/${encodeURIComponent(serial)}`, {
+    method: 'POST',
+  });
+  if (!res.ok) throw new Error('Failed to probe device');
+  return res.json();
+}
+
+export async function updateDevice(serial: string, data: { nickname?: string; model?: string; product?: string }) {
+  const res = await fetchWithAuth(`/api/v1/devices/${encodeURIComponent(serial)}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to update device');
+  return res.json();
+}
+
+export async function deleteDevice(serial: string) {
+  const res = await fetchWithAuth(`/api/v1/devices/${encodeURIComponent(serial)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to delete device');
+  return res.json();
+}
+
+// User API
+export interface UserInfo {
+  id: string;
+  username: string;
+  display_name: string;
+  role: string;
+}
+
+export async function listUsers(): Promise<UserInfo[]> {
+  const res = await fetchWithAuth('/api/v1/users');
+  if (!res.ok) throw new Error('Failed to list users');
+  const data = await res.json();
+  return data.users;
+}
+
+export async function grantAccess(userId: string, data: { device_serial?: string; group_id?: string; permission: string }) {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}/devices`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to grant access');
   return res.json();
 }
 

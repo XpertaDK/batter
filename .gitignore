@@ -23,3 +23,15 @@ web/out/
 
 # Database
 pgdata/
+
+# Runtime data
+data/
+
+# Playwright MCP
+.playwright-mcp/
+
+# Test screenshots
+dashboard-test*.png
+
+# TypeScript build info
+web/tsconfig.tsbuildinfo

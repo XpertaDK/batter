@@ -226,9 +226,15 @@ export class DeviceVideoPlayer {
 
     const description = this.buildAVCCDescription(this.sps, this.pps);
 
+    // Derive codec string from SPS: avc1.PPCCLL
+    const profile = this.sps[1].toString(16).padStart(2, '0');
+    const compat = this.sps[2].toString(16).padStart(2, '0');
+    const level = this.sps[3].toString(16).padStart(2, '0');
+    const codec = `avc1.${profile}${compat}${level}`;
+
     try {
       this.decoder.configure({
-        codec: "avc1.640028",
+        codec,
         description: description,
         optimizeForLatency: true,
       });

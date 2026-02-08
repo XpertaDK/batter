@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { getUser, isAdmin } from '@/lib/auth';
 import { logout } from '@/lib/api';
@@ -16,7 +17,13 @@ const adminItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const user = getUser();
+  const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
+  const [admin, setAdmin] = useState(false);
+
+  useEffect(() => {
+    setUser(getUser());
+    setAdmin(isAdmin());
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -51,7 +58,7 @@ export function Sidebar() {
           );
         })}
 
-        {isAdmin() && (
+        {admin && (
           <>
             <div className="pt-4 pb-1 px-3">
               <span className="text-[10px] uppercase tracking-wider text-gray-600">Admin</span>

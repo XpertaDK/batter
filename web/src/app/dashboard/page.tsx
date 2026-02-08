@@ -4,14 +4,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/sidebar';
 import { DeviceGrid } from '@/components/device/device-grid';
-import { listDevices, startSession, DeviceInfo } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { DeviceWizard } from '@/components/device/device-wizard';
+import { DeviceEditModal } from '@/components/device/device-edit-modal';
+import { listDevices, startSession, deleteDevice, DeviceInfo } from '@/lib/api';
+import { getToken, getUser } from '@/lib/auth';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showWizard, setShowWizard] = useState(false);
+  const [editSerial, setEditSerial] = useState<string | null>(null);
 
   useEffect(() => {
     if (!getToken()) {
@@ -39,7 +43,7 @@ export default function DashboardPage() {
   }, [fetchDevices]);
 
   const handleStartAll = async () => {
-    const connected = devices.filter(d => d.state === 'device' && !d.has_session);
+    const connected = devices.filter(d => d.status === 'connected' && !d.has_session);
     for (const d of connected) {
       try {
         await startSession(d.serial, 360, 5); // thumbnail tier
@@ -54,7 +58,28 @@ export default function DashboardPage() {
     router.push(`/devices/${encodeURIComponent(serial)}`);
   };
 
-  const connectedCount = devices.filter(d => d.state === 'device').length;
+  const handleEdit = (serial: string) => {
+    setEditSerial(serial);
+  };
+
+  const handleDelete = async (serial: string) => {
+    try {
+      await deleteDevice(serial);
+      fetchDevices();
+    } catch {
+      // ignore
+    }
+  };
+
+  const [canAddDevice, setCanAddDevice] = useState(false);
+
+  useEffect(() => {
+    const u = getUser();
+    setCanAddDevice(u?.role === 'admin' || u?.role === 'operator');
+  }, []);
+
+  const totalCount = devices.length;
+  const connectedCount = devices.filter(d => d.status === 'connected').length;
   const sessionCount = devices.filter(d => d.has_session).length;
 
   return (
@@ -66,7 +91,7 @@ export default function DashboardPage() {
           <div>
             <h2 className="text-lg font-semibold text-white">Devices</h2>
             <p className="text-xs text-gray-500">
-              {connectedCount} connected, {sessionCount} streaming
+              {totalCount} registered, {connectedCount} connected, {sessionCount} streaming
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -76,10 +101,18 @@ export default function DashboardPage() {
             >
               Refresh
             </button>
+            {canAddDevice && (
+              <button
+                onClick={() => setShowWizard(true)}
+                className="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg"
+              >
+                Add Device
+              </button>
+            )}
             {connectedCount > sessionCount && (
               <button
                 onClick={handleStartAll}
-                className="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg"
+                className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg"
               >
                 Start All Sessions
               </button>
@@ -94,10 +127,40 @@ export default function DashboardPage() {
           ) : error ? (
             <div className="text-red-400 text-sm">{error}</div>
           ) : (
-            <DeviceGrid devices={devices} onDeviceClick={handleDeviceClick} />
+            <DeviceGrid
+              devices={devices}
+              onDeviceClick={handleDeviceClick}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           )}
         </div>
       </div>
+
+      {showWizard && (
+        <DeviceWizard
+          onClose={() => setShowWizard(false)}
+          onComplete={() => {
+            setShowWizard(false);
+            fetchDevices();
+          }}
+        />
+      )}
+
+      {editSerial && (
+        <DeviceEditModal
+          device={devices.find(d => d.serial === editSerial) || null}
+          onClose={() => setEditSerial(null)}
+          onSaved={() => {
+            setEditSerial(null);
+            fetchDevices();
+          }}
+          onDeleted={() => {
+            setEditSerial(null);
+            fetchDevices();
+          }}
+        />
+      )}
     </div>
   );
 }

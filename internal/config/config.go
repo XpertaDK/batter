@@ -24,6 +24,9 @@ type Config struct {
 	JWTExpirySecs   int
 	AllowedOrigins  []string
 
+	// Data
+	DataDir string
+
 	// Frontend
 	FrontendURL string
 }
@@ -37,6 +40,7 @@ func Load() (*Config, error) {
 		ScrcpyServerPath: getEnv("SCRCPY_SERVER_PATH", "/usr/local/share/scrcpy/scrcpy-server"),
 		ScrcpyVersion:    getEnv("SCRCPY_VERSION", "3.3.4"),
 		JWTSecret:        getEnv("JWT_SECRET", ""),
+		DataDir:          getEnv("DATA_DIR", "./data"),
 		JWTExpirySecs:    getEnvInt("JWT_EXPIRY_SECS", 3600),
 		FrontendURL:      getEnv("FRONTEND_URL", "http://localhost:3000"),
 	}

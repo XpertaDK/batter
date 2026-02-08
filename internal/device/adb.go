@@ -142,6 +142,51 @@ func (a *ADB) run(ctx context.Context, args ...string) ([]byte, error) {
 	return out, nil
 }
 
+// GetState returns the ADB state for a device (e.g. "device", "offline", "unauthorized").
+func (a *ADB) GetState(ctx context.Context, serial string) (string, error) {
+	out, err := a.runWithSerial(ctx, serial, "get-state")
+	if err != nil {
+		return "", fmt.Errorf("adb get-state %s: %w", serial, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// GetProperties retrieves device properties via "adb shell getprop".
+// Returns a map of property names to values, extracting common fields:
+// ro.product.model, ro.product.name, ro.build.version.release
+func (a *ADB) GetProperties(ctx context.Context, serial string) (map[string]string, error) {
+	out, err := a.Shell(ctx, serial, "getprop")
+	if err != nil {
+		return nil, fmt.Errorf("adb getprop %s: %w", serial, err)
+	}
+
+	props := make(map[string]string)
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	for scanner.Scan() {
+		line := scanner.Text()
+		// Format: [key]: [value]
+		if !strings.HasPrefix(line, "[") {
+			continue
+		}
+		closeBracket := strings.Index(line, "]")
+		if closeBracket < 0 {
+			continue
+		}
+		key := line[1:closeBracket]
+
+		rest := line[closeBracket+1:]
+		valStart := strings.Index(rest, "[")
+		valEnd := strings.LastIndex(rest, "]")
+		if valStart < 0 || valEnd < 0 || valEnd <= valStart {
+			continue
+		}
+		value := rest[valStart+1 : valEnd]
+		props[key] = value
+	}
+
+	return props, nil
+}
+
 func (a *ADB) runWithSerial(ctx context.Context, serial string, args ...string) ([]byte, error) {
 	cmdArgs := append([]string{"-s", serial}, args...)
 	return a.run(ctx, cmdArgs...)

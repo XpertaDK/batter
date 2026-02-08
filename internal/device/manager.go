@@ -32,9 +32,10 @@ func TierOptions(tier SessionTier) SessionOptions {
 
 // ManagerConfig holds configuration for the device manager.
 type ManagerConfig struct {
-	ScrcpyServerPath string
-	ScrcpyVersion    string
-	Logger           *slog.Logger
+	ScrcpyServerPath   string
+	ScrcpyVersion      string
+	ScreenshotCacheDir string // DataDir for screenshot cache (e.g. "./data")
+	Logger             *slog.Logger
 }
 
 // Manager manages ADB devices and scrcpy sessions.
@@ -46,6 +47,7 @@ type Manager struct {
 	mu               sync.RWMutex
 	scrcpyServerPath string
 	scrcpyVersion    string
+	screenshotCache  *ScreenshotCache
 	logger           *slog.Logger
 }
 
@@ -79,6 +81,17 @@ func NewManager(cfg ManagerConfig) (*Manager, error) {
 		scrcpyVersion = "2.7"
 	}
 
+	var ssCache *ScreenshotCache
+	if cfg.ScreenshotCacheDir != "" {
+		sc, err := NewScreenshotCache(cfg.ScreenshotCacheDir)
+		if err != nil {
+			logger.Warn("failed to init screenshot cache, continuing without", "error", err)
+		} else {
+			ssCache = sc
+			logger.Info("screenshot cache initialized", "dir", cfg.ScreenshotCacheDir)
+		}
+	}
+
 	return &Manager{
 		adb:              adb,
 		sessions:         make(map[string]*Session),
@@ -86,6 +99,7 @@ func NewManager(cfg ManagerConfig) (*Manager, error) {
 		fullViewers:      make(map[string]int),
 		scrcpyServerPath: cfg.ScrcpyServerPath,
 		scrcpyVersion:    scrcpyVersion,
+		screenshotCache:  ssCache,
 		logger:           logger,
 	}, nil
 }
@@ -170,6 +184,21 @@ func (m *Manager) StopSession(serial string) error {
 	s, ok := m.sessions[serial]
 	if !ok {
 		return fmt.Errorf("no session for device %s", serial)
+	}
+
+	// Best-effort: capture a screenshot before stopping the session
+	if m.screenshotCache != nil {
+		func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			if png, err := m.adb.Screenshot(ctx, serial); err == nil {
+				if err := m.screenshotCache.Save(serial, png); err != nil {
+					m.logger.Warn("failed to cache screenshot on stop", "serial", serial, "error", err)
+				}
+			} else {
+				m.logger.Warn("failed to capture screenshot on stop", "serial", serial, "error", err)
+			}
+		}()
 	}
 
 	s.Close()
@@ -320,9 +349,28 @@ func (m *Manager) Health(ctx context.Context) HealthStatus {
 	return status
 }
 
-// Screenshot captures the device screen.
+// Screenshot captures the device screen. On success, caches the result to disk.
 func (m *Manager) Screenshot(ctx context.Context, serial string) ([]byte, error) {
-	return m.adb.Screenshot(ctx, serial)
+	png, err := m.adb.Screenshot(ctx, serial)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache in background
+	if m.screenshotCache != nil {
+		go func() {
+			if err := m.screenshotCache.Save(serial, png); err != nil {
+				m.logger.Warn("failed to cache screenshot", "serial", serial, "error", err)
+			}
+		}()
+	}
+
+	return png, nil
+}
+
+// ScreenshotCache returns the screenshot cache (may be nil if not configured).
+func (m *Manager) ScreenshotCache() *ScreenshotCache {
+	return m.screenshotCache
 }
 
 // Shutdown stops all sessions.
@@ -339,14 +387,28 @@ func (m *Manager) Shutdown() {
 	m.fullViewers = make(map[string]int)
 }
 
-// DeviceInfo extends ADBDevice with session status.
+// DeviceInfo extends ADBDevice with session and registration status.
 type DeviceInfo struct {
-	Serial      string      `json:"serial"`
-	State       string      `json:"state"`
-	Model       string      `json:"model"`
-	Product     string      `json:"product"`
-	HasSession  bool        `json:"has_session"`
-	Width       int         `json:"width,omitempty"`
-	Height      int         `json:"height,omitempty"`
-	SessionTier SessionTier `json:"session_tier,omitempty"`
+	Serial         string      `json:"serial"`
+	State          string      `json:"state"`
+	Status         string      `json:"status"`
+	Model          string      `json:"model"`
+	Product        string      `json:"product"`
+	Nickname       string      `json:"nickname,omitempty"`
+	AndroidVersion string      `json:"android_version,omitempty"`
+	HasSession     bool        `json:"has_session"`
+	Width          int         `json:"width,omitempty"`
+	Height         int         `json:"height,omitempty"`
+	SessionTier    SessionTier `json:"session_tier,omitempty"`
+	LastSeenAt     *time.Time  `json:"last_seen_at,omitempty"`
+}
+
+// ValidateDevice checks whether a device is reachable via ADB and returns its state.
+func (m *Manager) ValidateDevice(ctx context.Context, serial string) (string, error) {
+	return m.adb.GetState(ctx, serial)
+}
+
+// GetDeviceProperties retrieves device properties via ADB shell getprop.
+func (m *Manager) GetDeviceProperties(ctx context.Context, serial string) (map[string]string, error) {
+	return m.adb.GetProperties(ctx, serial)
 }

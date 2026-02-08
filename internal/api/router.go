@@ -39,7 +39,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 
 	// Handlers
 	authHandler := handlers.NewAuthHandler(cfg.DB, cfg.JWTManager, cfg.Logger)
-	deviceHandler := handlers.NewDeviceHandler(cfg.DeviceManager, cfg.Logger)
+	deviceHandler := handlers.NewDeviceHandler(cfg.DeviceManager, cfg.DB, cfg.Logger)
 	deviceWSHandler := handlers.NewDeviceWSHandler(cfg.DeviceManager, cfg.Logger)
 	userHandler := handlers.NewUserHandler(cfg.DB, cfg.Logger)
 	groupHandler := handlers.NewGroupHandler(cfg.DB, cfg.DeviceManager, cfg.Logger)
@@ -68,6 +68,16 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 				devices.GET("", deviceHandler.ListDevices)
 				devices.GET("/health", deviceHandler.DeviceHealth)
 
+				// Pre-registration endpoints (operator+, no device-specific RBAC)
+				preReg := devices.Group("")
+				preReg.Use(middleware.RequireRole("operator"))
+				{
+					preReg.POST("", deviceHandler.RegisterDevice)
+				preReg.GET("/discover", deviceHandler.DiscoverDevices)
+					preReg.POST("/validate/:serial", deviceHandler.ValidateDevice)
+					preReg.POST("/probe/:serial", deviceHandler.ProbeDevice)
+				}
+
 				// Per-device endpoints require at least "view" permission
 				deviceBySerial := devices.Group("/:serial")
 				deviceBySerial.Use(middleware.RequireDevicePermission(cfg.DB, "view"))
@@ -79,6 +89,8 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 					deviceBySerial.POST("/session/upgrade", deviceHandler.UpgradeSession)
 					deviceBySerial.POST("/session/downgrade", deviceHandler.DowngradeSession)
 					deviceBySerial.POST("/wake", deviceHandler.WakeScreen)
+					deviceBySerial.PUT("", deviceHandler.UpdateDevice)
+					deviceBySerial.DELETE("", deviceHandler.DeleteDevice)
 				}
 			}
 
