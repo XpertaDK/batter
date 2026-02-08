@@ -242,8 +242,21 @@ export async function deleteDevice(serial: string) {
 export interface UserInfo {
   id: string;
   username: string;
+  email: string;
   display_name: string;
   role: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
+}
+
+export interface UserAccessGrant {
+  id: string;
+  device_serial?: string;
+  group_id?: string;
+  group_name?: string;
+  permission: string;
+  created_at: string;
 }
 
 export async function listUsers(): Promise<UserInfo[]> {
@@ -251,6 +264,64 @@ export async function listUsers(): Promise<UserInfo[]> {
   if (!res.ok) throw new Error('Failed to list users');
   const data = await res.json();
   return data.users;
+}
+
+export async function createUser(username: string, password: string, role: string): Promise<{ id: string }> {
+  const res = await fetchWithAuth('/api/v1/users', {
+    method: 'POST',
+    body: JSON.stringify({ username, password, role }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to create user');
+  }
+  return res.json();
+}
+
+export async function updateUser(userId: string, data: { role?: string; display_name?: string; is_active?: boolean }) {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update user');
+  }
+  return res.json();
+}
+
+export async function deleteUser(userId: string) {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to delete user');
+  }
+  return res.json();
+}
+
+export async function listUserAccess(userId: string): Promise<UserAccessGrant[]> {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}/devices`);
+  if (!res.ok) throw new Error('Failed to list user access');
+  const data = await res.json();
+  return data.grants;
+}
+
+export async function revokeUserAccess(userId: string, accessId: string) {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}/devices/${accessId}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to revoke access');
+  return res.json();
+}
+
+export async function resetPassword(userId: string, newPassword: string) {
+  const res = await fetchWithAuth(`/api/v1/users/${userId}/password`, {
+    method: 'PUT',
+    body: JSON.stringify({ new_password: newPassword }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to reset password');
+  }
+  return res.json();
 }
 
 export async function grantAccess(userId: string, data: { device_serial?: string; group_id?: string; permission: string }) {
@@ -291,6 +362,18 @@ export async function createGroup(name: string, description?: string, color?: st
   return res.json();
 }
 
+export async function updateGroup(id: string, data: { name?: string; description?: string; color?: string }) {
+  const res = await fetchWithAuth(`/api/v1/groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update group');
+  }
+  return res.json();
+}
+
 export async function deleteGroup(id: string) {
   const res = await fetchWithAuth(`/api/v1/groups/${id}`, { method: 'DELETE' });
   if (!res.ok) throw new Error('Failed to delete group');
@@ -325,5 +408,178 @@ export async function batchStartGroup(id: string, maxSize?: number, maxFps?: num
 export async function batchStopGroup(id: string) {
   const res = await fetchWithAuth(`/api/v1/groups/${id}/batch/stop`, { method: 'POST' });
   if (!res.ok) throw new Error('Failed to batch stop');
+  return res.json();
+}
+
+export async function removeDeviceFromGroup(id: string, serial: string) {
+  const res = await fetchWithAuth(`/api/v1/groups/${id}/devices/${encodeURIComponent(serial)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to remove device from group');
+  return res.json();
+}
+
+export interface GroupAccessGrant {
+  id: string;
+  user_id: string;
+  username: string;
+  permission: string;
+  created_at: string;
+}
+
+export async function listGroupAccess(groupId: string): Promise<GroupAccessGrant[]> {
+  const res = await fetchWithAuth(`/api/v1/groups/${groupId}/access`);
+  if (!res.ok) throw new Error('Failed to list group access');
+  const data = await res.json();
+  return data.grants;
+}
+
+export async function revokeAccess(groupId: string, accessId: string) {
+  const res = await fetchWithAuth(`/api/v1/groups/${groupId}/access/${accessId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to revoke access');
+  return res.json();
+}
+
+export interface GroupTeamAccessGrant {
+  id: string;
+  user_group_id: string;
+  team_name: string;
+  permission: string;
+  created_at: string;
+}
+
+export async function listGroupTeamAccess(groupId: string): Promise<GroupTeamAccessGrant[]> {
+  const res = await fetchWithAuth(`/api/v1/groups/${groupId}/team-access`);
+  if (!res.ok) throw new Error('Failed to list team access');
+  const data = await res.json();
+  return data.grants;
+}
+
+export async function grantGroupTeamAccess(groupId: string, userGroupId: string, permission: string) {
+  const res = await fetchWithAuth(`/api/v1/groups/${groupId}/team-access`, {
+    method: 'POST',
+    body: JSON.stringify({ user_group_id: userGroupId, permission }),
+  });
+  if (!res.ok) throw new Error('Failed to grant team access');
+  return res.json();
+}
+
+export async function revokeGroupTeamAccess(groupId: string, accessId: string) {
+  const res = await fetchWithAuth(`/api/v1/groups/${groupId}/team-access/${accessId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to revoke team access');
+  return res.json();
+}
+
+// User Group (Team) API
+export interface UserGroup {
+  id: string;
+  name: string;
+  description: string;
+  member_count: number;
+  created_at: string;
+}
+
+export interface UserGroupMember {
+  user_id: string;
+  username: string;
+  display_name: string;
+  role: string;
+}
+
+export interface UserGroupAccessGrant {
+  id: string;
+  device_serial?: string;
+  group_id?: string;
+  group_name?: string;
+  permission: string;
+  created_at: string;
+}
+
+export async function listUserGroups(): Promise<UserGroup[]> {
+  const res = await fetchWithAuth('/api/v1/user-groups');
+  if (!res.ok) throw new Error('Failed to list user groups');
+  const data = await res.json();
+  return data.groups;
+}
+
+export async function createUserGroup(name: string, description?: string): Promise<UserGroup> {
+  const res = await fetchWithAuth('/api/v1/user-groups', {
+    method: 'POST',
+    body: JSON.stringify({ name, description }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to create group');
+  }
+  return res.json();
+}
+
+export async function updateUserGroup(id: string, data: { name?: string; description?: string }) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update group');
+  }
+  return res.json();
+}
+
+export async function deleteUserGroup(id: string) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Failed to delete group');
+  return res.json();
+}
+
+export async function listUserGroupMembers(id: string): Promise<UserGroupMember[]> {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/members`);
+  if (!res.ok) throw new Error('Failed to list members');
+  const data = await res.json();
+  return data.members;
+}
+
+export async function addUserGroupMember(id: string, userId: string) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId }),
+  });
+  if (!res.ok) throw new Error('Failed to add member');
+  return res.json();
+}
+
+export async function removeUserGroupMember(id: string, userId: string) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/members/${userId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to remove member');
+  return res.json();
+}
+
+export async function listUserGroupAccess(id: string): Promise<UserGroupAccessGrant[]> {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/access`);
+  if (!res.ok) throw new Error('Failed to list access');
+  const data = await res.json();
+  return data.grants;
+}
+
+export async function grantUserGroupAccess(id: string, body: { device_serial?: string; group_id?: string; permission: string }) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/access`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error('Failed to grant access');
+  return res.json();
+}
+
+export async function revokeUserGroupAccess(id: string, accessId: string) {
+  const res = await fetchWithAuth(`/api/v1/user-groups/${id}/access/${accessId}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) throw new Error('Failed to revoke access');
   return res.json();
 }

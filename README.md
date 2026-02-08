@@ -4,6 +4,9 @@ Remote Android phone management platform. View, control, and manage multiple And
 
 ![Dashboard](docs/screenshot-dashboard.png)
 
+![Users](docs/screenshot-users.png)
+![Groups](docs/screenshot-groups.png)
+
 ## Features
 
 - **Live video streaming** - Real-time H.264 video from Android devices via scrcpy, decoded in-browser with WebCodecs API
@@ -12,9 +15,11 @@ Remote Android phone management platform. View, control, and manage multiple And
 - **Adaptive quality** - Automatic thumbnail (360p/5fps) and full-quality (1024p/30fps) session tiers
 - **Screenshot cache** - Cached last screenshot shown when devices are disconnected or sessions are idle
 - **Device registration** - Guided wizard to register, validate, and probe device properties
-- **Device groups** - Organize devices into groups with batch session start/stop
-- **User management** - Role-based access control (admin, operator, viewer) with JWT authentication
-- **RBAC** - Per-device and per-group access permissions for non-admin users
+- **Device groups** - Organize devices into groups with batch session start/stop, per-group access grants
+- **Teams** - Group users into teams and grant team-level access to devices and device groups
+- **User management** - Role-based access control (admin, operator, viewer) with expandable user cards, access overview, and password reset
+- **RBAC** - Per-device, per-group, and per-team access permissions (view, control, manage) for non-admin users
+- **Tabbed card UI** - Consistent expandable card design with tabbed views across Users, Teams, and Device Groups pages
 
 ## Architecture
 
@@ -88,17 +93,22 @@ This starts PostgreSQL, the Go backend, and the Next.js frontend. The container 
 cmd/batter/              # Application entrypoint
 internal/
   api/
-    handlers/            # HTTP + WebSocket handlers
-    middleware/           # Auth, CORS, RBAC middleware
+    handlers/            # HTTP + WebSocket handlers (devices, groups, users, teams)
+    middleware/           # Auth, CORS, RBAC, audit logging middleware
     router.go            # Route definitions
   auth/                  # JWT + password hashing
   config/                # Environment config
   device/                # ADB, scrcpy sessions, screenshot cache
-db/migrations/           # PostgreSQL schema migrations
+db/migrations/           # PostgreSQL schema migrations (auto-applied)
 web/                     # Next.js frontend
   src/
-    app/                 # App Router pages
-    components/          # React components
+    app/
+      dashboard/         # Device grid with live thumbnails
+      devices/[serial]/  # Full-screen device viewer
+      groups/            # Device groups management
+      admin/users/       # User management (admin)
+      admin/user-groups/ # Team management (admin)
+    components/          # React components (device cards, wizard, layout)
     lib/                 # API client, auth, video players
 scripts/                 # Utility scripts
 ```
@@ -111,6 +121,7 @@ All endpoints are prefixed with `/api/v1` and require JWT authentication (except
 |--------|----------|-------------|
 | POST | `/auth/login` | Login, returns access + refresh tokens |
 | POST | `/auth/refresh` | Refresh access token |
+| GET | `/auth/me` | Get current user info |
 | GET | `/devices` | List registered devices with live status |
 | POST | `/devices` | Register a new device |
 | GET | `/devices/:serial` | Get single device info |
@@ -121,6 +132,38 @@ All endpoints are prefixed with `/api/v1` and require JWT authentication (except
 | POST | `/devices/:serial/session/upgrade` | Switch to full quality |
 | POST | `/devices/:serial/session/downgrade` | Switch to thumbnail quality |
 | GET | `/devices/:serial/screenshot` | Get device screenshot (live or cached) |
+| GET | `/groups` | List device groups |
+| POST | `/groups` | Create device group |
+| PUT | `/groups/:id` | Update group name/description/color |
+| DELETE | `/groups/:id` | Delete device group |
+| GET | `/groups/:id/devices` | List devices in group |
+| POST | `/groups/:id/devices` | Add devices to group |
+| DELETE | `/groups/:id/devices/:serial` | Remove device from group |
+| POST | `/groups/:id/batch/start` | Batch start sessions |
+| POST | `/groups/:id/batch/stop` | Batch stop sessions |
+| GET | `/groups/:id/access` | List user access grants for group |
+| DELETE | `/groups/:id/access/:accessId` | Revoke user access grant |
+| GET | `/groups/:id/team-access` | List team access grants for group |
+| POST | `/groups/:id/team-access` | Grant team access to group |
+| DELETE | `/groups/:id/team-access/:accessId` | Revoke team access grant |
+| GET | `/users` | List users (admin) |
+| POST | `/users` | Create user (admin) |
+| PUT | `/users/:id` | Update user role/status (admin) |
+| DELETE | `/users/:id` | Delete user (admin) |
+| GET | `/users/:id/devices` | List user's access grants (admin) |
+| POST | `/users/:id/devices` | Grant device/group access to user (admin) |
+| DELETE | `/users/:id/devices/:accessId` | Revoke user access (admin) |
+| PUT | `/users/:id/password` | Reset user password (admin) |
+| GET | `/user-groups` | List teams (admin) |
+| POST | `/user-groups` | Create team (admin) |
+| PUT | `/user-groups/:id` | Update team (admin) |
+| DELETE | `/user-groups/:id` | Delete team (admin) |
+| GET | `/user-groups/:id/members` | List team members (admin) |
+| POST | `/user-groups/:id/members` | Add member to team (admin) |
+| DELETE | `/user-groups/:id/members/:userId` | Remove member from team (admin) |
+| GET | `/user-groups/:id/access` | List team's device access grants (admin) |
+| POST | `/user-groups/:id/access` | Grant device access to team (admin) |
+| DELETE | `/user-groups/:id/access/:accessId` | Revoke team device access (admin) |
 
 ### WebSocket
 

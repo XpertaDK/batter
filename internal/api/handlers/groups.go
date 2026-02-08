@@ -109,6 +109,63 @@ func (h *GroupHandler) CreateGroup(c *gin.Context) {
 	})
 }
 
+// UpdateGroupRequest represents a request to update a device group.
+type UpdateGroupRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Color       *string `json:"color"`
+}
+
+// UpdateGroup updates a device group's name, description, or color.
+func (h *GroupHandler) UpdateGroup(c *gin.Context) {
+	groupID := c.Param("id")
+
+	var req UpdateGroupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	if req.Name != nil {
+		if *req.Name == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "name cannot be empty"})
+			return
+		}
+		_, err := h.db.Exec(c.Request.Context(),
+			"UPDATE device_groups SET name = $1 WHERE id = $2", *req.Name, groupID,
+		)
+		if err != nil {
+			h.logger.Error("failed to update group name", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update group"})
+			return
+		}
+	}
+
+	if req.Description != nil {
+		_, err := h.db.Exec(c.Request.Context(),
+			"UPDATE device_groups SET description = $1 WHERE id = $2", *req.Description, groupID,
+		)
+		if err != nil {
+			h.logger.Error("failed to update group description", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update group"})
+			return
+		}
+	}
+
+	if req.Color != nil {
+		_, err := h.db.Exec(c.Request.Context(),
+			"UPDATE device_groups SET color = $1 WHERE id = $2", *req.Color, groupID,
+		)
+		if err != nil {
+			h.logger.Error("failed to update group color", "error", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to update group"})
+			return
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "group updated"})
+}
+
 // DeleteGroup deletes a device group.
 func (h *GroupHandler) DeleteGroup(c *gin.Context) {
 	groupID := c.Param("id")
@@ -246,6 +303,70 @@ func (h *GroupHandler) BatchStart(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"started": started, "failed": failed})
 }
 
+// GetGroupAccess returns all user access grants for a group.
+func (h *GroupHandler) GetGroupAccess(c *gin.Context) {
+	groupID := c.Param("id")
+
+	rows, err := h.db.Query(c.Request.Context(),
+		`SELECT a.id, a.user_id, u.username, a.permission, a.created_at
+		 FROM user_device_access a
+		 JOIN users u ON u.id = a.user_id
+		 WHERE a.group_id = $1
+		 ORDER BY u.username`, groupID,
+	)
+	if err != nil {
+		h.logger.Error("failed to list group access", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list group access"})
+		return
+	}
+	defer rows.Close()
+
+	var grants []gin.H
+	for rows.Next() {
+		var id, userID, username, permission string
+		var createdAt interface{}
+		if err := rows.Scan(&id, &userID, &username, &permission, &createdAt); err != nil {
+			continue
+		}
+		grants = append(grants, gin.H{
+			"id":         id,
+			"user_id":    userID,
+			"username":   username,
+			"permission": permission,
+			"created_at": createdAt,
+		})
+	}
+
+	if grants == nil {
+		grants = []gin.H{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"grants": grants})
+}
+
+// RevokeGroupAccess revokes a specific access grant from a group.
+func (h *GroupHandler) RevokeGroupAccess(c *gin.Context) {
+	accessID := c.Param("accessId")
+	groupID := c.Param("id")
+
+	result, err := h.db.Exec(c.Request.Context(),
+		"DELETE FROM user_device_access WHERE id = $1 AND group_id = $2",
+		accessID, groupID,
+	)
+	if err != nil {
+		h.logger.Error("failed to revoke group access", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke access"})
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "access grant not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "access revoked"})
+}
+
 // BatchStop stops sessions for all devices in a group.
 func (h *GroupHandler) BatchStop(c *gin.Context) {
 	groupID := c.Param("id")
@@ -273,4 +394,104 @@ func (h *GroupHandler) BatchStop(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"stopped": stopped, "failed": failed})
+}
+
+// GetGroupTeamAccess returns all team access grants for a device group.
+func (h *GroupHandler) GetGroupTeamAccess(c *gin.Context) {
+	groupID := c.Param("id")
+
+	rows, err := h.db.Query(c.Request.Context(),
+		`SELECT a.id, a.user_group_id, ug.name, a.permission, a.created_at
+		 FROM user_group_access a
+		 JOIN user_groups ug ON ug.id = a.user_group_id
+		 WHERE a.group_id = $1
+		 ORDER BY ug.name`, groupID,
+	)
+	if err != nil {
+		h.logger.Error("failed to list group team access", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to list team access"})
+		return
+	}
+	defer rows.Close()
+
+	var grants []gin.H
+	for rows.Next() {
+		var id, userGroupID, teamName, permission string
+		var createdAt interface{}
+		if err := rows.Scan(&id, &userGroupID, &teamName, &permission, &createdAt); err != nil {
+			continue
+		}
+		grants = append(grants, gin.H{
+			"id":            id,
+			"user_group_id": userGroupID,
+			"team_name":     teamName,
+			"permission":    permission,
+			"created_at":    createdAt,
+		})
+	}
+
+	if grants == nil {
+		grants = []gin.H{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"grants": grants})
+}
+
+type grantGroupTeamAccessRequest struct {
+	UserGroupID string `json:"user_group_id" binding:"required"`
+	Permission  string `json:"permission" binding:"required"`
+}
+
+// GrantGroupTeamAccess grants a team access to a device group.
+func (h *GroupHandler) GrantGroupTeamAccess(c *gin.Context) {
+	groupID := c.Param("id")
+	grantedBy, _ := c.Get("user_id")
+
+	var req grantGroupTeamAccessRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_group_id and permission are required"})
+		return
+	}
+
+	if req.Permission != "view" && req.Permission != "control" && req.Permission != "manage" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "permission must be view, control, or manage"})
+		return
+	}
+
+	var accessID string
+	err := h.db.QueryRow(c.Request.Context(),
+		`INSERT INTO user_group_access (user_group_id, group_id, permission, granted_by)
+		 VALUES ($1, $2, $3, $4) RETURNING id`,
+		req.UserGroupID, groupID, req.Permission, grantedBy,
+	).Scan(&accessID)
+	if err != nil {
+		h.logger.Error("failed to grant team access", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to grant team access"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"id": accessID, "message": "team access granted"})
+}
+
+// RevokeGroupTeamAccess revokes a team access grant from a device group.
+func (h *GroupHandler) RevokeGroupTeamAccess(c *gin.Context) {
+	groupID := c.Param("id")
+	accessID := c.Param("accessId")
+
+	result, err := h.db.Exec(c.Request.Context(),
+		"DELETE FROM user_group_access WHERE id = $1 AND group_id = $2",
+		accessID, groupID,
+	)
+	if err != nil {
+		h.logger.Error("failed to revoke team access", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to revoke team access"})
+		return
+	}
+
+	if result.RowsAffected() == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"error": "access grant not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "team access revoked"})
 }

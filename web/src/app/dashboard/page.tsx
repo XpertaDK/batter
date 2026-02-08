@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sidebar } from '@/components/layout/sidebar';
 import { DeviceGrid } from '@/components/device/device-grid';
 import { DeviceWizard } from '@/components/device/device-wizard';
 import { DeviceEditModal } from '@/components/device/device-edit-modal';
-import { listDevices, startSession, deleteDevice, DeviceInfo } from '@/lib/api';
+import { listDevices, startSession, deleteDevice, listGroups, getGroupDevices, DeviceInfo, DeviceGroup } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+
+const GROUP_STORAGE_KEY = 'batter_dashboard_group';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -17,11 +18,19 @@ export default function DashboardPage() {
   const [showWizard, setShowWizard] = useState(false);
   const [editSerial, setEditSerial] = useState<string | null>(null);
 
+  // Group filter state
+  const [groups, setGroups] = useState<DeviceGroup[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>('');
+  const [groupSerials, setGroupSerials] = useState<string[] | null>(null);
+
   useEffect(() => {
     if (!getToken()) {
       router.replace('/login');
       return;
     }
+    // Restore persisted group filter
+    const saved = sessionStorage.getItem(GROUP_STORAGE_KEY);
+    if (saved) setSelectedGroupId(saved);
   }, [router]);
 
   const fetchDevices = useCallback(async () => {
@@ -36,17 +45,46 @@ export default function DashboardPage() {
     }
   }, []);
 
+  const fetchGroups = useCallback(async () => {
+    try {
+      const g = await listGroups();
+      setGroups(g);
+    } catch {
+      // groups are optional, don't block dashboard
+    }
+  }, []);
+
   useEffect(() => {
     fetchDevices();
+    fetchGroups();
     const interval = setInterval(fetchDevices, 5000);
     return () => clearInterval(interval);
-  }, [fetchDevices]);
+  }, [fetchDevices, fetchGroups]);
+
+  // When group selection changes, fetch its member serials
+  useEffect(() => {
+    if (!selectedGroupId) {
+      setGroupSerials(null);
+      sessionStorage.removeItem(GROUP_STORAGE_KEY);
+      return;
+    }
+    sessionStorage.setItem(GROUP_STORAGE_KEY, selectedGroupId);
+    getGroupDevices(selectedGroupId)
+      .then(serials => setGroupSerials(serials))
+      .catch(() => setGroupSerials([]));
+  }, [selectedGroupId]);
+
+  const filteredDevices = groupSerials
+    ? devices.filter(d => groupSerials.includes(d.serial))
+    : devices;
+
+  const selectedGroup = groups.find(g => g.id === selectedGroupId);
 
   const handleStartAll = async () => {
-    const connected = devices.filter(d => d.status === 'connected' && !d.has_session);
+    const connected = filteredDevices.filter(d => d.status === 'connected' && !d.has_session);
     for (const d of connected) {
       try {
-        await startSession(d.serial, 360, 5); // thumbnail tier
+        await startSession(d.serial, 360, 5);
       } catch {
         // skip failed
       }
@@ -78,33 +116,46 @@ export default function DashboardPage() {
     setCanAddDevice(u?.role === 'admin' || u?.role === 'operator');
   }, []);
 
-  const totalCount = devices.length;
-  const connectedCount = devices.filter(d => d.status === 'connected').length;
-  const sessionCount = devices.filter(d => d.has_session).length;
+  const totalCount = filteredDevices.length;
+  const connectedCount = filteredDevices.filter(d => d.status === 'connected').length;
+  const sessionCount = filteredDevices.filter(d => d.has_session).length;
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+    <>
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div>
             <h2 className="text-lg font-semibold text-white">Devices</h2>
             <p className="text-xs text-gray-500">
-              {totalCount} registered, {connectedCount} connected, {sessionCount} streaming
+              {selectedGroup
+                ? `Showing ${totalCount} device${totalCount !== 1 ? 's' : ''} in "${selectedGroup.name}"`
+                : `${totalCount} registered, ${connectedCount} connected, ${sessionCount} streaming`}
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {/* Group filter dropdown */}
+            {groups.length > 0 && (
+              <select
+                value={selectedGroupId}
+                onChange={e => setSelectedGroupId(e.target.value)}
+                className="px-2 py-2 text-xs bg-gray-800 border border-gray-700 text-gray-300 rounded-lg"
+              >
+                <option value="">All Devices</option>
+                {groups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            )}
             <button
               onClick={fetchDevices}
-              className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg"
+              className="px-3 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg"
             >
               Refresh
             </button>
             {canAddDevice && (
               <button
                 onClick={() => setShowWizard(true)}
-                className="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg"
+                className="px-3 py-2 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg"
               >
                 Add Device
               </button>
@@ -112,7 +163,7 @@ export default function DashboardPage() {
             {connectedCount > sessionCount && (
               <button
                 onClick={handleStartAll}
-                className="px-3 py-1.5 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg"
+                className="px-3 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg"
               >
                 Start All Sessions
               </button>
@@ -128,14 +179,13 @@ export default function DashboardPage() {
             <div className="text-red-400 text-sm">{error}</div>
           ) : (
             <DeviceGrid
-              devices={devices}
+              devices={filteredDevices}
               onDeviceClick={handleDeviceClick}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
           )}
         </div>
-      </div>
 
       {showWizard && (
         <DeviceWizard
@@ -161,6 +211,6 @@ export default function DashboardPage() {
           }}
         />
       )}
-    </div>
+    </>
   );
 }

@@ -43,6 +43,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 	deviceWSHandler := handlers.NewDeviceWSHandler(cfg.DeviceManager, cfg.Logger)
 	userHandler := handlers.NewUserHandler(cfg.DB, cfg.Logger)
 	groupHandler := handlers.NewGroupHandler(cfg.DB, cfg.DeviceManager, cfg.Logger)
+	userGroupHandler := handlers.NewUserGroupHandler(cfg.DB, cfg.Logger)
 
 	// API v1
 	v1 := r.Group("/api/v1")
@@ -73,7 +74,7 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 				preReg.Use(middleware.RequireRole("operator"))
 				{
 					preReg.POST("", deviceHandler.RegisterDevice)
-				preReg.GET("/discover", deviceHandler.DiscoverDevices)
+					preReg.GET("/discover", deviceHandler.DiscoverDevices)
 					preReg.POST("/validate/:serial", deviceHandler.ValidateDevice)
 					preReg.POST("/probe/:serial", deviceHandler.ProbeDevice)
 				}
@@ -99,12 +100,18 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 			{
 				groups.GET("", groupHandler.ListGroups)
 				groups.POST("", groupHandler.CreateGroup)
+				groups.PUT("/:id", groupHandler.UpdateGroup)
 				groups.DELETE("/:id", groupHandler.DeleteGroup)
 				groups.GET("/:id/devices", groupHandler.GetGroupDevices)
 				groups.POST("/:id/devices", groupHandler.AddDevices)
 				groups.DELETE("/:id/devices/:serial", groupHandler.RemoveDevice)
 				groups.POST("/:id/batch/start", groupHandler.BatchStart)
 				groups.POST("/:id/batch/stop", groupHandler.BatchStop)
+				groups.GET("/:id/access", groupHandler.GetGroupAccess)
+				groups.DELETE("/:id/access/:accessId", groupHandler.RevokeGroupAccess)
+				groups.GET("/:id/team-access", groupHandler.GetGroupTeamAccess)
+				groups.POST("/:id/team-access", groupHandler.GrantGroupTeamAccess)
+				groups.DELETE("/:id/team-access/:accessId", groupHandler.RevokeGroupTeamAccess)
 			}
 
 			// Users (admin only)
@@ -113,7 +120,28 @@ func NewRouter(cfg RouterConfig) *gin.Engine {
 			{
 				users.GET("", userHandler.ListUsers)
 				users.POST("", userHandler.CreateUser)
+				users.PUT("/:id", userHandler.UpdateUser)
+				users.DELETE("/:id", userHandler.DeleteUser)
+				users.GET("/:id/devices", userHandler.ListUserAccess)
 				users.POST("/:id/devices", userHandler.GrantAccess)
+				users.DELETE("/:id/devices/:accessId", userHandler.RevokeUserAccess)
+				users.PUT("/:id/password", userHandler.ResetPassword)
+			}
+
+			// User groups / teams (admin only)
+			userGroups := protected.Group("/user-groups")
+			userGroups.Use(middleware.RequireRole("admin"))
+			{
+				userGroups.GET("", userGroupHandler.ListUserGroups)
+				userGroups.POST("", userGroupHandler.CreateUserGroup)
+				userGroups.PUT("/:id", userGroupHandler.UpdateUserGroup)
+				userGroups.DELETE("/:id", userGroupHandler.DeleteUserGroup)
+				userGroups.GET("/:id/members", userGroupHandler.ListMembers)
+				userGroups.POST("/:id/members", userGroupHandler.AddMember)
+				userGroups.DELETE("/:id/members/:userId", userGroupHandler.RemoveMember)
+				userGroups.GET("/:id/access", userGroupHandler.ListAccess)
+				userGroups.POST("/:id/access", userGroupHandler.GrantAccess)
+				userGroups.DELETE("/:id/access/:accessId", userGroupHandler.RevokeAccess)
 			}
 		}
 	}

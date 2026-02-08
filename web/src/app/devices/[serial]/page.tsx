@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { Sidebar } from '@/components/layout/sidebar';
 import { DeviceViewer } from '@/components/device/device-viewer';
 import { getDevice, startSession, stopSession, upgradeSession, downgradeSession, DeviceInfo } from '@/lib/api';
 import { getToken } from '@/lib/auth';
@@ -62,9 +61,7 @@ export default function DeviceDetailPage() {
   };
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-2 border-b border-gray-800 bg-gray-900">
           <div className="flex items-center gap-3">
@@ -81,7 +78,7 @@ export default function DeviceDetailPage() {
           </div>
           <button
             onClick={handleStop}
-            className="px-2 py-1 text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded"
+            className="px-3 py-2 text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 rounded-lg"
           >
             Stop Session
           </button>
@@ -105,7 +102,6 @@ export default function DeviceDetailPage() {
             </div>
           )}
         </div>
-      </div>
     </div>
   );
 }

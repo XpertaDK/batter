@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design 2: Tabbed Card Expansion</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca'}}}}}</script>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen flex">
+
+<!-- Sidebar -->
+<div class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col h-screen shrink-0">
+  <div class="px-4 py-4 border-b border-gray-800">
+    <h1 class="text-lg font-bold text-white">Batter</h1>
+    <p class="text-[10px] text-gray-500">Remote Phone Management</p>
+  </div>
+  <nav class="flex-1 p-2 space-y-1">
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📱</span><span>Devices</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📁</span><span>Groups</span></a>
+    <div class="pt-4 pb-1 px-3"><span class="text-[10px] uppercase tracking-wider text-gray-600">Admin</span></div>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>👤</span><span>Users</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-brand-600/20 text-brand-400"><span>👥</span><span>Teams</span></a>
+  </nav>
+  <div class="p-3 border-t border-gray-800">
+    <div class="flex items-center justify-between">
+      <div><div class="text-sm text-gray-200">admin</div><div class="text-[10px] text-gray-500">admin</div></div>
+      <button class="text-xs text-gray-500 hover:text-gray-300">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Teams</h2>
+      <p class="text-xs text-gray-500">2 teams</p>
+    </div>
+    <button class="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg">New Team</button>
+  </div>
+
+  <div class="flex-1 overflow-auto">
+    <div class="max-w-4xl mx-auto p-6 space-y-4">
+
+      <!-- Team Card: QA Team (expanded) -->
+      <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <!-- Card header -->
+        <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-800/30">
+          <div class="flex items-center gap-4">
+            <div class="h-9 w-9 rounded-lg bg-brand-600/20 flex items-center justify-center text-brand-400 font-bold">Q</div>
+            <div>
+              <div class="text-white font-medium">QA Team</div>
+              <div class="text-xs text-gray-500">Quality assurance testers</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="flex -space-x-2">
+              <div class="h-6 w-6 rounded-full bg-blue-600/30 border-2 border-gray-900 flex items-center justify-center text-[9px] text-blue-400 font-medium">JD</div>
+              <div class="h-6 w-6 rounded-full bg-green-600/30 border-2 border-gray-900 flex items-center justify-center text-[9px] text-green-400 font-medium">V1</div>
+              <div class="h-6 w-6 rounded-full bg-purple-600/30 border-2 border-gray-900 flex items-center justify-center text-[9px] text-purple-400 font-medium">AS</div>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-gray-500">
+              <span>3 members</span>
+              <span>&middot;</span>
+              <span>3 grants</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-500 rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="flex border-t border-b border-gray-800 bg-gray-950/50">
+          <button class="px-5 py-2.5 text-xs font-medium text-brand-400 border-b-2 border-brand-500">Members</button>
+          <button class="px-5 py-2.5 text-xs font-medium text-gray-500 hover:text-gray-300 border-b-2 border-transparent">Device Access</button>
+          <button class="px-5 py-2.5 text-xs font-medium text-gray-500 hover:text-gray-300 border-b-2 border-transparent">Settings</button>
+        </div>
+
+        <!-- Members tab content -->
+        <div class="p-5">
+          <!-- Add member input -->
+          <div class="flex items-center gap-2 mb-4">
+            <div class="relative flex-1">
+              <input type="text" placeholder="Search users to add..." class="w-full pl-8 pr-3 py-2 bg-gray-950 border border-gray-800 rounded-lg text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-600">
+              <svg class="absolute left-2.5 top-2.5 w-3 h-3 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+          </div>
+
+          <!-- Member list -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/40 group">
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs font-medium">JD</div>
+                <div>
+                  <div class="text-sm text-white">John Doe</div>
+                  <div class="text-[10px] text-gray-500">@johndoe &middot; Added 2 days ago</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-900/30 text-blue-400">operator</span>
+                <button class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/20 transition-opacity">
+                  <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/40 group">
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-full bg-green-600/20 flex items-center justify-center text-green-400 text-xs font-medium">V1</div>
+                <div>
+                  <div class="text-sm text-white">viewer1</div>
+                  <div class="text-[10px] text-gray-500">@viewer1 &middot; Added 1 day ago</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">viewer</span>
+                <button class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/20 transition-opacity">
+                  <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center justify-between px-3 py-2.5 rounded-lg hover:bg-gray-800/40 group">
+              <div class="flex items-center gap-3">
+                <div class="h-8 w-8 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-xs font-medium">AS</div>
+                <div>
+                  <div class="text-sm text-white">Alice Smith</div>
+                  <div class="text-[10px] text-gray-500">@alice &middot; Added 5 hours ago</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">viewer</span>
+                <button class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-900/20 transition-opacity">
+                  <svg class="w-3.5 h-3.5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Card: Dev Team (collapsed) -->
+      <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-gray-800/30">
+          <div class="flex items-center gap-4">
+            <div class="h-9 w-9 rounded-lg bg-green-600/20 flex items-center justify-center text-green-400 font-bold">D</div>
+            <div>
+              <div class="text-white font-medium">Dev Team</div>
+              <div class="text-xs text-gray-500">Backend and frontend developers</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-4">
+            <div class="flex -space-x-2">
+              <div class="h-6 w-6 rounded-full bg-orange-600/30 border-2 border-gray-900 flex items-center justify-center text-[9px] text-orange-400 font-medium">BK</div>
+              <div class="h-6 w-6 rounded-full bg-cyan-600/30 border-2 border-gray-900 flex items-center justify-center text-[9px] text-cyan-400 font-medium">ML</div>
+            </div>
+            <div class="flex items-center gap-2 text-[10px] text-gray-500">
+              <span>2 members</span>
+              <span>&middot;</span>
+              <span>5 grants</span>
+            </div>
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

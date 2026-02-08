@@ -92,7 +92,7 @@ export function DeviceEditModal({ device, onClose, onSaved, onDeleted }: DeviceE
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="e.g. Test Phone 1"
-              className="w-full px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
+              className="w-full px-3 py-2 text-xs bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-600 focus:outline-none focus:border-brand-500"
             />
           </div>
 
@@ -111,13 +111,13 @@ export function DeviceEditModal({ device, onClose, onSaved, onDeleted }: DeviceE
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="px-2.5 py-1.5 text-xs bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50"
+                  className="px-3 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-50"
                 >
                   {deleting ? 'Deleting...' : 'Confirm Delete'}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
-                  className="px-2.5 py-1.5 text-xs text-gray-400 hover:text-gray-200"
+                  className="px-3 py-2 text-xs text-gray-400 hover:text-gray-200"
                 >
                   Cancel
                 </button>
@@ -130,14 +130,14 @@ export function DeviceEditModal({ device, onClose, onSaved, onDeleted }: DeviceE
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-800">
           <button
             onClick={onClose}
-            className="px-3 py-1.5 text-xs text-gray-400 hover:text-gray-200"
+            className="px-3 py-2 text-xs text-gray-400 hover:text-gray-200"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg disabled:opacity-50"
+            className="px-3 py-2 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save'}
           </button>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design 4: Permission Matrix</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca'}}}}}</script>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen flex">
+
+<!-- Sidebar -->
+<div class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col h-screen shrink-0">
+  <div class="px-4 py-4 border-b border-gray-800">
+    <h1 class="text-lg font-bold text-white">Batter</h1>
+    <p class="text-[10px] text-gray-500">Remote Phone Management</p>
+  </div>
+  <nav class="flex-1 p-2 space-y-1">
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📱</span><span>Devices</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📁</span><span>Groups</span></a>
+    <div class="pt-4 pb-1 px-3"><span class="text-[10px] uppercase tracking-wider text-gray-600">Admin</span></div>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>👤</span><span>Users</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-brand-600/20 text-brand-400"><span>👥</span><span>Teams</span></a>
+  </nav>
+  <div class="p-3 border-t border-gray-800">
+    <div class="flex items-center justify-between">
+      <div><div class="text-sm text-gray-200">admin</div><div class="text-[10px] text-gray-500">admin</div></div>
+      <button class="text-xs text-gray-500 hover:text-gray-300">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+  <div class="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+    <div>
+      <h2 class="text-lg font-semibold text-white">Permission Matrix</h2>
+      <p class="text-xs text-gray-500">Teams &times; Devices access overview</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button class="px-3 py-1.5 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg">New Team</button>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="flex items-center gap-4 px-6 py-2 border-b border-gray-800/50 bg-gray-900/30">
+    <span class="text-[10px] text-gray-500">Click cells to change:</span>
+    <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-gray-800 border border-gray-700"></div><span class="text-[10px] text-gray-500">None</span></div>
+    <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-green-900/50 border border-green-700"></div><span class="text-[10px] text-green-400">View</span></div>
+    <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-blue-900/50 border border-blue-700"></div><span class="text-[10px] text-blue-400">Control</span></div>
+    <div class="flex items-center gap-1"><div class="w-3 h-3 rounded bg-red-900/50 border border-red-700"></div><span class="text-[10px] text-red-400">Manage</span></div>
+  </div>
+
+  <div class="flex-1 overflow-auto">
+    <div class="p-6">
+      <div class="bg-gray-900 border border-gray-800 rounded-lg overflow-hidden">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-gray-800">
+              <th class="text-left px-4 py-3 text-[10px] uppercase tracking-wider text-gray-500 font-medium bg-gray-900 sticky left-0 min-w-[240px]">Team</th>
+              <th class="px-3 py-3 text-center min-w-[110px]">
+                <div class="text-[10px] text-gray-500 font-medium">📱 Lab Pixel 9a</div>
+                <div class="text-[9px] text-gray-600">4B191...18123</div>
+              </th>
+              <th class="px-3 py-3 text-center min-w-[110px]">
+                <div class="text-[10px] text-gray-500 font-medium">📱 Galaxy S24</div>
+                <div class="text-[9px] text-gray-600">34011...18959</div>
+              </th>
+              <th class="px-3 py-3 text-center min-w-[110px] bg-gray-800/20">
+                <div class="text-[10px] text-gray-500 font-medium">📁 Test Phones</div>
+                <div class="text-[9px] text-gray-600">4 devices</div>
+              </th>
+              <th class="px-3 py-3 text-center min-w-[110px] bg-gray-800/20">
+                <div class="text-[10px] text-gray-500 font-medium">📁 Staging</div>
+                <div class="text-[9px] text-gray-600">2 devices</div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- QA Team row -->
+            <tr class="border-b border-gray-800/50 hover:bg-gray-800/20">
+              <td class="px-4 py-3 sticky left-0 bg-gray-900">
+                <div class="flex items-center gap-3">
+                  <div class="h-8 w-8 rounded-lg bg-brand-600/20 flex items-center justify-center text-brand-400 text-xs font-bold">Q</div>
+                  <div>
+                    <div class="text-sm text-white font-medium">QA Team</div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex -space-x-1.5">
+                        <div class="h-4 w-4 rounded-full bg-blue-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-blue-400">J</div>
+                        <div class="h-4 w-4 rounded-full bg-green-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-green-400">V</div>
+                        <div class="h-4 w-4 rounded-full bg-purple-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-purple-400">A</div>
+                      </div>
+                      <span class="text-[10px] text-gray-500">3 members</span>
+                      <button class="text-[10px] text-brand-400 hover:text-brand-300">edit</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-blue-900/40 border border-blue-800/50 text-[10px] text-blue-400 font-medium hover:bg-blue-900/60 transition-colors cursor-pointer">
+                  control
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-green-900/40 border border-green-800/50 text-[10px] text-green-400 font-medium hover:bg-green-900/60 transition-colors cursor-pointer">
+                  view
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-blue-900/40 border border-blue-800/50 text-[10px] text-blue-400 font-medium hover:bg-blue-900/60 transition-colors cursor-pointer">
+                  control
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-gray-800/50 border border-gray-700/50 text-[10px] text-gray-500 hover:bg-gray-800 transition-colors cursor-pointer">
+                  &mdash;
+                </button>
+              </td>
+            </tr>
+
+            <!-- Dev Team row -->
+            <tr class="border-b border-gray-800/50 hover:bg-gray-800/20">
+              <td class="px-4 py-3 sticky left-0 bg-gray-900">
+                <div class="flex items-center gap-3">
+                  <div class="h-8 w-8 rounded-lg bg-green-600/20 flex items-center justify-center text-green-400 text-xs font-bold">D</div>
+                  <div>
+                    <div class="text-sm text-white font-medium">Dev Team</div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex -space-x-1.5">
+                        <div class="h-4 w-4 rounded-full bg-orange-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-orange-400">B</div>
+                        <div class="h-4 w-4 rounded-full bg-cyan-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-cyan-400">M</div>
+                      </div>
+                      <span class="text-[10px] text-gray-500">2 members</span>
+                      <button class="text-[10px] text-brand-400 hover:text-brand-300">edit</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-red-900/40 border border-red-800/50 text-[10px] text-red-400 font-medium hover:bg-red-900/60 transition-colors cursor-pointer">
+                  manage
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-red-900/40 border border-red-800/50 text-[10px] text-red-400 font-medium hover:bg-red-900/60 transition-colors cursor-pointer">
+                  manage
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-gray-800/50 border border-gray-700/50 text-[10px] text-gray-500 hover:bg-gray-800 transition-colors cursor-pointer">
+                  &mdash;
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-blue-900/40 border border-blue-800/50 text-[10px] text-blue-400 font-medium hover:bg-blue-900/60 transition-colors cursor-pointer">
+                  control
+                </button>
+              </td>
+            </tr>
+
+            <!-- Ops Team row -->
+            <tr class="hover:bg-gray-800/20">
+              <td class="px-4 py-3 sticky left-0 bg-gray-900">
+                <div class="flex items-center gap-3">
+                  <div class="h-8 w-8 rounded-lg bg-orange-600/20 flex items-center justify-center text-orange-400 text-xs font-bold">O</div>
+                  <div>
+                    <div class="text-sm text-white font-medium">Ops Team</div>
+                    <div class="flex items-center gap-2">
+                      <div class="flex -space-x-1.5">
+                        <div class="h-4 w-4 rounded-full bg-pink-600/30 border border-gray-900 flex items-center justify-center text-[7px] text-pink-400">K</div>
+                      </div>
+                      <span class="text-[10px] text-gray-500">1 member</span>
+                      <button class="text-[10px] text-brand-400 hover:text-brand-300">edit</button>
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-green-900/40 border border-green-800/50 text-[10px] text-green-400 font-medium hover:bg-green-900/60 transition-colors cursor-pointer">
+                  view
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-gray-800/50 border border-gray-700/50 text-[10px] text-gray-500 hover:bg-gray-800 transition-colors cursor-pointer">
+                  &mdash;
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-green-900/40 border border-green-800/50 text-[10px] text-green-400 font-medium hover:bg-green-900/60 transition-colors cursor-pointer">
+                  view
+                </button>
+              </td>
+              <td class="px-3 py-3 text-center bg-gray-800/10">
+                <button class="inline-flex items-center justify-center w-full px-2 py-1.5 rounded-md bg-green-900/40 border border-green-800/50 text-[10px] text-green-400 font-medium hover:bg-green-900/60 transition-colors cursor-pointer">
+                  view
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

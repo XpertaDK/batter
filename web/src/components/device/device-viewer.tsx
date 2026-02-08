@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { DeviceVideoPlayer } from '@/lib/device-video';
 import { DeviceInputHandler } from '@/lib/device-input';
+import { fetchScreenshot } from '@/lib/api';
 
 interface DeviceViewerProps {
   serial: string;
@@ -15,6 +16,7 @@ export function DeviceViewer({ serial }: DeviceViewerProps) {
   const [videoStatus, setVideoStatus] = useState('connecting');
   const [controlStatus, setControlStatus] = useState('connecting');
   const [fps, setFps] = useState(0);
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -46,6 +48,23 @@ export function DeviceViewer({ serial }: DeviceViewerProps) {
     };
   }, [serial]);
 
+  const handleScreenshot = async () => {
+    setCapturing(true);
+    try {
+      const blob = await fetchScreenshot(serial);
+      if (blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${serial}-${Date.now()}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } finally {
+      setCapturing(false);
+    }
+  };
+
   const statusColor = videoStatus === 'streaming' ? 'text-green-400' : 'text-yellow-400';
 
   return (
@@ -64,6 +83,13 @@ export function DeviceViewer({ serial }: DeviceViewerProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={handleScreenshot}
+            disabled={capturing}
+            className="px-2 py-1 text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 rounded disabled:opacity-50"
+          >
+            {capturing ? 'Capturing...' : 'Screenshot'}
+          </button>
           <button
             onClick={() => inputRef.current?.sendWake()}
             className="px-2 py-1 text-[10px] bg-gray-800 hover:bg-gray-700 text-gray-300 rounded"

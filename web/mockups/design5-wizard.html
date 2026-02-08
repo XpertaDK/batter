@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design 5: Wizard-Style with Summary</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>tailwind.config={theme:{extend:{colors:{brand:{400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca'}}}}}</script>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen flex">
+
+<!-- Sidebar -->
+<div class="w-56 bg-gray-900 border-r border-gray-800 flex flex-col h-screen shrink-0">
+  <div class="px-4 py-4 border-b border-gray-800">
+    <h1 class="text-lg font-bold text-white">Batter</h1>
+    <p class="text-[10px] text-gray-500">Remote Phone Management</p>
+  </div>
+  <nav class="flex-1 p-2 space-y-1">
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📱</span><span>Devices</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>📁</span><span>Groups</span></a>
+    <div class="pt-4 pb-1 px-3"><span class="text-[10px] uppercase tracking-wider text-gray-600">Admin</span></div>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-400 hover:text-gray-200 hover:bg-gray-800"><span>👤</span><span>Users</span></a>
+    <a href="#" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-brand-600/20 text-brand-400"><span>👥</span><span>Teams</span></a>
+  </nav>
+  <div class="p-3 border-t border-gray-800">
+    <div class="flex items-center justify-between">
+      <div><div class="text-sm text-gray-200">admin</div><div class="text-[10px] text-gray-500">admin</div></div>
+      <button class="text-xs text-gray-500 hover:text-gray-300">Logout</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div class="flex-1 flex flex-col h-screen overflow-hidden">
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 px-6 py-3 border-b border-gray-800 bg-gray-900">
+    <a href="#" class="text-xs text-gray-500 hover:text-gray-300">Teams</a>
+    <span class="text-xs text-gray-600">/</span>
+    <span class="text-xs text-gray-300">QA Team</span>
+  </div>
+
+  <div class="flex-1 overflow-auto">
+    <div class="max-w-3xl mx-auto py-8 px-6">
+
+      <!-- Stepper -->
+      <div class="flex items-center justify-center gap-0 mb-8">
+        <div class="flex items-center gap-2">
+          <div class="h-7 w-7 rounded-full bg-brand-600 flex items-center justify-center text-white text-[10px] font-bold">✓</div>
+          <span class="text-xs text-brand-400 font-medium">Team Info</span>
+        </div>
+        <div class="w-16 h-px bg-brand-600 mx-2"></div>
+        <div class="flex items-center gap-2">
+          <div class="h-7 w-7 rounded-full bg-brand-600 flex items-center justify-center text-white text-[10px] font-bold">2</div>
+          <span class="text-xs text-brand-400 font-medium">Members</span>
+        </div>
+        <div class="w-16 h-px bg-gray-700 mx-2"></div>
+        <div class="flex items-center gap-2">
+          <div class="h-7 w-7 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-gray-500 text-[10px] font-bold">3</div>
+          <span class="text-xs text-gray-500 font-medium">Access</span>
+        </div>
+      </div>
+
+      <!-- Step 2: Members (active) -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h3 class="text-base font-semibold text-white">Select Team Members</h3>
+            <p class="text-xs text-gray-500 mt-0.5">Choose which users belong to QA Team</p>
+          </div>
+          <div class="text-xs text-gray-400">
+            <span class="text-brand-400 font-medium">3</span> of 5 selected
+          </div>
+        </div>
+
+        <!-- Search -->
+        <div class="relative mb-4">
+          <input type="text" placeholder="Search users..." class="w-full pl-8 pr-3 py-2.5 bg-gray-950 border border-gray-800 rounded-lg text-xs text-white placeholder-gray-600 focus:outline-none focus:border-brand-600">
+          <svg class="absolute left-2.5 top-3 w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        </div>
+
+        <!-- User checklist -->
+        <div class="space-y-1">
+          <label class="flex items-center gap-3 px-4 py-3 rounded-lg bg-brand-600/10 border border-brand-600/30 cursor-pointer">
+            <input type="checkbox" checked class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-600 focus:ring-brand-600 focus:ring-offset-gray-900">
+            <div class="h-8 w-8 rounded-full bg-blue-600/20 flex items-center justify-center text-blue-400 text-xs font-medium shrink-0">JD</div>
+            <div class="flex-1">
+              <div class="text-sm text-white">John Doe</div>
+              <div class="text-[10px] text-gray-500">@johndoe</div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-900/30 text-blue-400">operator</span>
+          </label>
+
+          <label class="flex items-center gap-3 px-4 py-3 rounded-lg bg-brand-600/10 border border-brand-600/30 cursor-pointer">
+            <input type="checkbox" checked class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-600 focus:ring-brand-600 focus:ring-offset-gray-900">
+            <div class="h-8 w-8 rounded-full bg-green-600/20 flex items-center justify-center text-green-400 text-xs font-medium shrink-0">V1</div>
+            <div class="flex-1">
+              <div class="text-sm text-white">viewer1</div>
+              <div class="text-[10px] text-gray-500">@viewer1</div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">viewer</span>
+          </label>
+
+          <label class="flex items-center gap-3 px-4 py-3 rounded-lg bg-brand-600/10 border border-brand-600/30 cursor-pointer">
+            <input type="checkbox" checked class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-600 focus:ring-brand-600 focus:ring-offset-gray-900">
+            <div class="h-8 w-8 rounded-full bg-purple-600/20 flex items-center justify-center text-purple-400 text-xs font-medium shrink-0">AS</div>
+            <div class="flex-1">
+              <div class="text-sm text-white">Alice Smith</div>
+              <div class="text-[10px] text-gray-500">@alice</div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">viewer</span>
+          </label>
+
+          <label class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800/30 cursor-pointer border border-transparent">
+            <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-600 focus:ring-brand-600 focus:ring-offset-gray-900">
+            <div class="h-8 w-8 rounded-full bg-orange-600/20 flex items-center justify-center text-orange-400 text-xs font-medium shrink-0">BK</div>
+            <div class="flex-1">
+              <div class="text-sm text-white">Bob King</div>
+              <div class="text-[10px] text-gray-500">@bobking</div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-blue-900/30 text-blue-400">operator</span>
+          </label>
+
+          <label class="flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-800/30 cursor-pointer border border-transparent">
+            <input type="checkbox" class="w-4 h-4 rounded border-gray-600 bg-gray-800 text-brand-600 focus:ring-brand-600 focus:ring-offset-gray-900">
+            <div class="h-8 w-8 rounded-full bg-cyan-600/20 flex items-center justify-center text-cyan-400 text-xs font-medium shrink-0">ML</div>
+            <div class="flex-1">
+              <div class="text-sm text-white">Mary Lee</div>
+              <div class="text-[10px] text-gray-500">@marylee</div>
+            </div>
+            <span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-800 text-gray-400">viewer</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Sticky footer -->
+  <div class="border-t border-gray-800 bg-gray-900 px-6 py-3">
+    <div class="max-w-3xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-4 text-xs text-gray-400">
+        <div class="flex items-center gap-1.5">
+          <div class="flex -space-x-1.5">
+            <div class="h-5 w-5 rounded-full bg-blue-600/30 border-2 border-gray-900 flex items-center justify-center text-[8px] text-blue-400">J</div>
+            <div class="h-5 w-5 rounded-full bg-green-600/30 border-2 border-gray-900 flex items-center justify-center text-[8px] text-green-400">V</div>
+            <div class="h-5 w-5 rounded-full bg-purple-600/30 border-2 border-gray-900 flex items-center justify-center text-[8px] text-purple-400">A</div>
+          </div>
+          <span>3 members</span>
+        </div>
+        <span class="text-gray-700">|</span>
+        <span>2 devices, 1 group</span>
+        <span class="text-gray-700">|</span>
+        <span><span class="text-blue-400">2</span> control, <span class="text-green-400">1</span> view</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <button class="px-4 py-2 text-xs text-gray-400 hover:text-white border border-gray-700 rounded-lg">Back</button>
+        <button class="px-4 py-2 text-xs bg-brand-600 hover:bg-brand-700 text-white rounded-lg">Next: Access</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

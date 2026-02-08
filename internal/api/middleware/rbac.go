@@ -87,6 +87,49 @@ func checkDeviceAccess(c *gin.Context, db *pgxpool.Pool, userID, serial, minPerm
 		}
 	}
 
+	// Check user group direct device access
+	rows3, err := db.Query(c.Request.Context(), `
+		SELECT a.permission FROM user_group_access a
+		JOIN user_group_members m ON m.group_id = a.user_group_id
+		WHERE m.user_id = $1 AND a.device_serial = $2
+	`, userID, serial)
+	if err != nil {
+		return false, err
+	}
+	defer rows3.Close()
+
+	for rows3.Next() {
+		var perm string
+		if err := rows3.Scan(&perm); err != nil {
+			continue
+		}
+		if permissionLevel(perm) >= permLevel {
+			return true, nil
+		}
+	}
+
+	// Check user group device-group access
+	rows4, err := db.Query(c.Request.Context(), `
+		SELECT a.permission FROM user_group_access a
+		JOIN user_group_members m ON m.group_id = a.user_group_id
+		JOIN device_group_members dgm ON dgm.group_id = a.group_id
+		WHERE m.user_id = $1 AND dgm.device_serial = $2 AND a.group_id IS NOT NULL
+	`, userID, serial)
+	if err != nil {
+		return false, err
+	}
+	defer rows4.Close()
+
+	for rows4.Next() {
+		var perm string
+		if err := rows4.Scan(&perm); err != nil {
+			continue
+		}
+		if permissionLevel(perm) >= permLevel {
+			return true, nil
+		}
+	}
+
 	return false, nil
 }
 
@@ -104,6 +147,15 @@ func GetAccessibleSerials(c *gin.Context, db *pgxpool.Pool, userID, role string)
 		SELECT DISTINCT m.device_serial FROM user_device_access a
 		JOIN device_group_members m ON m.group_id = a.group_id
 		WHERE a.user_id = $1 AND a.group_id IS NOT NULL
+		UNION
+		SELECT DISTINCT a.device_serial FROM user_group_access a
+		JOIN user_group_members m ON m.group_id = a.user_group_id
+		WHERE m.user_id = $1 AND a.device_serial IS NOT NULL
+		UNION
+		SELECT DISTINCT dgm.device_serial FROM user_group_access a
+		JOIN user_group_members m ON m.group_id = a.user_group_id
+		JOIN device_group_members dgm ON dgm.group_id = a.group_id
+		WHERE m.user_id = $1 AND a.group_id IS NOT NULL
 	`, userID)
 	if err != nil {
 		return nil, err

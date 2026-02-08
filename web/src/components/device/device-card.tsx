@@ -63,9 +63,7 @@ export function DeviceCard({ device, onClick, onEdit, onDelete }: DeviceCardProp
   return (
     <div
       onClick={onClick}
-      className={`group cursor-pointer rounded-lg bg-gray-900 border border-gray-800 overflow-hidden hover:border-brand-500/50 transition-colors relative ${
-        isDisconnected ? 'opacity-60' : ''
-      }`}
+      className="group cursor-pointer rounded-lg bg-gray-900 border border-gray-800 overflow-hidden hover:border-brand-500/50 transition-colors relative"
     >
       {/* Kebab menu */}
       {(onEdit || onDelete) && (
@@ -116,7 +114,7 @@ export function DeviceCard({ device, onClick, onEdit, onDelete }: DeviceCardProp
         {screenshotUrl ? (
           <img
             src={screenshotUrl}
-            className="absolute inset-0 w-full h-full object-contain"
+            className={`absolute inset-0 w-full h-full object-contain ${isDisconnected ? 'brightness-50' : ''}`}
             alt=""
           />
         ) : !device.has_session && (
@@ -129,9 +127,24 @@ export function DeviceCard({ device, onClick, onEdit, onDelete }: DeviceCardProp
         {device.has_session && (
           <canvas
             ref={canvasRef}
-            className="absolute inset-0 w-full h-full object-contain"
+            className={`absolute inset-0 w-full h-full object-contain ${isDisconnected ? 'brightness-50' : ''}`}
           />
         )}
+
+        {/* Darken overlay for disconnected devices without screenshot */}
+        {isDisconnected && !screenshotUrl && !device.has_session && (
+          <div className="absolute inset-0 bg-gray-950/40" />
+        )}
+
+        {/* Connection status badge */}
+        <div className={`absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium ${
+          isDisconnected
+            ? 'bg-gray-900/80 text-gray-400'
+            : 'bg-gray-900/80 text-green-400'
+        }`}>
+          <div className={`w-1.5 h-1.5 rounded-full ${isDisconnected ? 'bg-gray-500' : 'bg-green-500'}`} />
+          {isDisconnected ? 'Disconnected' : 'Connected'}
+        </div>
 
         {/* Status overlay */}
         {device.has_session && status !== 'streaming' && status !== 'idle' && (
