@@ -19,7 +19,120 @@ Remote Android phone management platform. View, control, and manage multiple And
 - **Teams** - Group users into teams and grant team-level access to devices and device groups
 - **User management** - Role-based access control (admin, operator, viewer) with expandable user cards, access overview, and password reset
 - **RBAC** - Per-device, per-group, and per-team access permissions (view, control, manage) for non-admin users
-- **Tabbed card UI** - Consistent expandable card design with tabbed views across Users, Teams, and Device Groups pages
+- **Fully offline** - No external CDN, fonts, or scripts. The app works entirely without internet after deployment
+
+## Deployment
+
+### Requirements
+
+- [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
+- A Linux host with USB ports (for connecting Android devices)
+- One or more Android devices with **USB debugging** enabled
+
+### Step 1: Clone the repository
+
+```bash
+git clone https://github.com/XpertaDK/batter.git
+cd batter
+```
+
+### Step 2: Set a secure JWT secret
+
+Open `docker-compose.yml` and change the `JWT_SECRET` value to a random string (32+ characters):
+
+```yaml
+environment:
+  JWT_SECRET: your-random-secret-here   # <-- change this
+```
+
+You can generate one with:
+
+```bash
+openssl rand -hex 32
+```
+
+### Step 3: Connect your Android devices
+
+Plug in your Android device(s) via USB. Make sure USB debugging is enabled:
+
+1. On the device, go to **Settings > About phone** and tap **Build number** 7 times to enable Developer Options
+2. Go to **Settings > Developer options** and enable **USB debugging**
+3. When prompted on the device, tap **Allow** to authorize the computer
+
+Verify the devices are detected:
+
+```bash
+adb devices
+```
+
+### Step 4: Start Batter
+
+```bash
+docker compose up -d
+```
+
+This builds and starts everything:
+
+| Container | What it does |
+|-----------|-------------|
+| **postgres** | PostgreSQL 16 database (data persisted in a Docker volume) |
+| **batter** | Go backend (port 8080) + Next.js frontend (port 3000) |
+
+Database migrations are applied automatically on first start.
+
+### Step 5: Open the browser
+
+Go to **http://localhost:3000**
+
+On first launch, you'll see a setup screen to create your **admin account**. After that, you can:
+
+1. Click **Add Device** to register your connected Android devices
+2. Click a device card to start a live remote session
+3. Create **groups**, **users**, and **teams** from the sidebar
+
+### Stopping and restarting
+
+```bash
+# Stop everything
+docker compose down
+
+# Start again (data is preserved)
+docker compose up -d
+
+# Stop and delete all data (fresh start)
+docker compose down -v
+```
+
+### Updating
+
+```bash
+git pull
+docker compose up -d --build
+```
+
+### Custom port
+
+To change the frontend port (default 3000), update `docker-compose.yml`:
+
+```yaml
+ports:
+  - "8080:8080"
+  - "9000:3000"    # Access at http://localhost:9000
+environment:
+  ALLOWED_ORIGINS: http://localhost:9000
+  FRONTEND_URL: http://localhost:9000
+```
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `no devices found` after adding a device | Make sure USB debugging is enabled and the device authorized. Run `adb devices` on the host to verify. |
+| Container can't see USB devices | The container needs `privileged: true` and `/dev/bus/usb` mounted (both are set in `docker-compose.yml`). |
+| Database connection errors on startup | Wait a few seconds and retry — postgres needs time to initialize on first run. The healthcheck handles this automatically. |
+| `JWT_SECRET: change-me-in-production` warning | Set a proper secret in `docker-compose.yml` (see Step 2). |
+
+---
 
 ## Architecture
 
@@ -36,56 +149,6 @@ Browser (Next.js)  <--HTTP/WS-->  Go Backend  <--ADB/scrcpy-->  Android Devices
 | Database | PostgreSQL 16 |
 | Streaming | scrcpy-server (H.264), WebCodecs VideoDecoder |
 | Auth | JWT (access + refresh tokens), bcrypt |
-
-## Prerequisites
-
-- Go 1.24+
-- Node.js 20+
-- Docker (for PostgreSQL)
-- ADB (Android Debug Bridge)
-- scrcpy-server binary (v3.x)
-- Android device(s) with USB debugging enabled
-
-## Quick Start
-
-### 1. Start the database
-
-```bash
-make db-up
-```
-
-### 2. Configure environment
-
-```bash
-cp .env.example .env
-# Edit .env and set JWT_SECRET to a random string (32+ chars)
-```
-
-### 3. Start the backend
-
-```bash
-make dev
-```
-
-### 4. Start the frontend
-
-```bash
-cd web && npm install && npm run dev
-```
-
-### 5. Open the browser
-
-Navigate to `http://localhost:3000`. On first launch, you'll be prompted to create an admin account.
-
-## Docker
-
-Run the full stack with Docker Compose:
-
-```bash
-docker compose up -d
-```
-
-This starts PostgreSQL, the Go backend, and the Next.js frontend. The container needs `privileged: true` and access to `/dev/bus/usb` for ADB.
 
 ## Project Structure
 
@@ -113,65 +176,6 @@ web/                     # Next.js frontend
 scripts/                 # Utility scripts
 ```
 
-## API
-
-All endpoints are prefixed with `/api/v1` and require JWT authentication (except auth routes).
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/login` | Login, returns access + refresh tokens |
-| POST | `/auth/refresh` | Refresh access token |
-| GET | `/auth/me` | Get current user info |
-| GET | `/devices` | List registered devices with live status |
-| POST | `/devices` | Register a new device |
-| GET | `/devices/:serial` | Get single device info |
-| PUT | `/devices/:serial` | Update device nickname/properties |
-| DELETE | `/devices/:serial` | Delete device |
-| POST | `/devices/:serial/session/start` | Start scrcpy session |
-| POST | `/devices/:serial/session/stop` | Stop session |
-| POST | `/devices/:serial/session/upgrade` | Switch to full quality |
-| POST | `/devices/:serial/session/downgrade` | Switch to thumbnail quality |
-| GET | `/devices/:serial/screenshot` | Get device screenshot (live or cached) |
-| GET | `/groups` | List device groups |
-| POST | `/groups` | Create device group |
-| PUT | `/groups/:id` | Update group name/description/color |
-| DELETE | `/groups/:id` | Delete device group |
-| GET | `/groups/:id/devices` | List devices in group |
-| POST | `/groups/:id/devices` | Add devices to group |
-| DELETE | `/groups/:id/devices/:serial` | Remove device from group |
-| POST | `/groups/:id/batch/start` | Batch start sessions |
-| POST | `/groups/:id/batch/stop` | Batch stop sessions |
-| GET | `/groups/:id/access` | List user access grants for group |
-| DELETE | `/groups/:id/access/:accessId` | Revoke user access grant |
-| GET | `/groups/:id/team-access` | List team access grants for group |
-| POST | `/groups/:id/team-access` | Grant team access to group |
-| DELETE | `/groups/:id/team-access/:accessId` | Revoke team access grant |
-| GET | `/users` | List users (admin) |
-| POST | `/users` | Create user (admin) |
-| PUT | `/users/:id` | Update user role/status (admin) |
-| DELETE | `/users/:id` | Delete user (admin) |
-| GET | `/users/:id/devices` | List user's access grants (admin) |
-| POST | `/users/:id/devices` | Grant device/group access to user (admin) |
-| DELETE | `/users/:id/devices/:accessId` | Revoke user access (admin) |
-| PUT | `/users/:id/password` | Reset user password (admin) |
-| GET | `/user-groups` | List teams (admin) |
-| POST | `/user-groups` | Create team (admin) |
-| PUT | `/user-groups/:id` | Update team (admin) |
-| DELETE | `/user-groups/:id` | Delete team (admin) |
-| GET | `/user-groups/:id/members` | List team members (admin) |
-| POST | `/user-groups/:id/members` | Add member to team (admin) |
-| DELETE | `/user-groups/:id/members/:userId` | Remove member from team (admin) |
-| GET | `/user-groups/:id/access` | List team's device access grants (admin) |
-| POST | `/user-groups/:id/access` | Grant device access to team (admin) |
-| DELETE | `/user-groups/:id/access/:accessId` | Revoke team device access (admin) |
-
-### WebSocket
-
-| Endpoint | Description |
-|----------|-------------|
-| `/ws/device/:serial/video` | H.264 video stream (binary frames) |
-| `/ws/device/:serial/control` | Touch/keyboard input (JSON messages) |
-
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -186,23 +190,132 @@ All endpoints are prefixed with `/api/v1` and require JWT authentication (except
 | `ALLOWED_ORIGINS` | *(empty)* | Comma-separated CORS origins |
 | `FRONTEND_URL` | `http://localhost:3000` | Frontend URL for CORS |
 
+## API Reference
+
+All endpoints are prefixed with `/api/v1` and require JWT authentication (except auth routes).
+
+<details>
+<summary>Auth</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/login` | Login, returns access + refresh tokens |
+| POST | `/auth/refresh` | Refresh access token |
+| GET | `/auth/me` | Get current user info |
+
+</details>
+
+<details>
+<summary>Devices</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/devices` | List registered devices with live status |
+| POST | `/devices` | Register a new device |
+| GET | `/devices/:serial` | Get single device info |
+| PUT | `/devices/:serial` | Update device nickname/properties |
+| DELETE | `/devices/:serial` | Delete device |
+| POST | `/devices/:serial/session/start` | Start scrcpy session |
+| POST | `/devices/:serial/session/stop` | Stop session |
+| POST | `/devices/:serial/session/upgrade` | Switch to full quality |
+| POST | `/devices/:serial/session/downgrade` | Switch to thumbnail quality |
+| GET | `/devices/:serial/screenshot` | Get device screenshot (live or cached) |
+
+</details>
+
+<details>
+<summary>Device Groups</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/groups` | List device groups |
+| POST | `/groups` | Create device group |
+| PUT | `/groups/:id` | Update group name/description/color |
+| DELETE | `/groups/:id` | Delete device group |
+| GET | `/groups/:id/devices` | List devices in group |
+| POST | `/groups/:id/devices` | Add devices to group |
+| DELETE | `/groups/:id/devices/:serial` | Remove device from group |
+| POST | `/groups/:id/batch/start` | Batch start sessions |
+| POST | `/groups/:id/batch/stop` | Batch stop sessions |
+| GET | `/groups/:id/access` | List user access grants for group |
+| DELETE | `/groups/:id/access/:accessId` | Revoke user access grant |
+| GET | `/groups/:id/team-access` | List team access grants for group |
+| POST | `/groups/:id/team-access` | Grant team access to group |
+| DELETE | `/groups/:id/team-access/:accessId` | Revoke team access grant |
+
+</details>
+
+<details>
+<summary>Users (admin only)</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | List users |
+| POST | `/users` | Create user |
+| PUT | `/users/:id` | Update user role/status |
+| DELETE | `/users/:id` | Delete user |
+| GET | `/users/:id/devices` | List user's access grants |
+| POST | `/users/:id/devices` | Grant device/group access to user |
+| DELETE | `/users/:id/devices/:accessId` | Revoke user access |
+| PUT | `/users/:id/password` | Reset user password |
+
+</details>
+
+<details>
+<summary>Teams (admin only)</summary>
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/user-groups` | List teams |
+| POST | `/user-groups` | Create team |
+| PUT | `/user-groups/:id` | Update team |
+| DELETE | `/user-groups/:id` | Delete team |
+| GET | `/user-groups/:id/members` | List team members |
+| POST | `/user-groups/:id/members` | Add member to team |
+| DELETE | `/user-groups/:id/members/:userId` | Remove member from team |
+| GET | `/user-groups/:id/access` | List team's device access grants |
+| POST | `/user-groups/:id/access` | Grant device access to team |
+| DELETE | `/user-groups/:id/access/:accessId` | Revoke team device access |
+
+</details>
+
+<details>
+<summary>WebSocket</summary>
+
+| Endpoint | Description |
+|----------|-------------|
+| `/ws/device/:serial/video` | H.264 video stream (binary frames) |
+| `/ws/device/:serial/control` | Touch/keyboard input (JSON messages) |
+
+</details>
+
 ## Development
 
+For local development without Docker (requires Go 1.24+, Node.js 20+, ADB):
+
 ```bash
-# Run backend
+# Start only the database
+make db-up
+
+# Configure environment
+cp .env.example .env
+# Edit .env and set JWT_SECRET
+
+# Start the Go backend
 make dev
 
-# Run frontend (separate terminal)
-cd web && npm run dev
+# In another terminal, start the Next.js frontend
+cd web && npm install && npm run dev
+```
 
-# Run tests
-make test
+Open **http://localhost:3000**.
 
-# Build binary
-make build
-
-# Lint
-make lint
+```bash
+# Other useful commands
+make test      # Run tests
+make build     # Build Go binary
+make lint      # Run linter
+make db-reset  # Reset database (deletes all data)
 ```
 
 ## License
