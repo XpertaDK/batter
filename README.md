@@ -26,111 +26,160 @@ Remote Android phone management platform. View, control, and manage multiple And
 ### Requirements
 
 - [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/)
-- A Linux host with USB ports (for connecting Android devices)
+- A Linux host with USB ports for connecting Android devices
 - One or more Android devices with **USB debugging** enabled
 
-### Step 1: Clone the repository
+### Step 1: Clone and configure
 
 ```bash
 git clone https://github.com/XpertaDK/batter.git
 cd batter
+cp .env.example .env
 ```
 
-### Step 2: Set a secure JWT secret
-
-Open `docker-compose.yml` and change the `JWT_SECRET` value to a random string (32+ characters):
-
-```yaml
-environment:
-  JWT_SECRET: your-random-secret-here   # <-- change this
-```
-
-You can generate one with:
+Edit `.env` and set the required `JWT_SECRET`:
 
 ```bash
+# Generate a secure secret
 openssl rand -hex 32
 ```
 
-### Step 3: Connect your Android devices
+Paste the result into `.env`:
+
+```env
+JWT_SECRET=your-generated-secret-here
+POSTGRES_PASSWORD=a-strong-database-password
+```
+
+### Step 2: Connect your Android devices
 
 Plug in your Android device(s) via USB. Make sure USB debugging is enabled:
 
-1. On the device, go to **Settings > About phone** and tap **Build number** 7 times to enable Developer Options
+1. On the device, go to **Settings > About phone** and tap **Build number** 7 times
 2. Go to **Settings > Developer options** and enable **USB debugging**
 3. When prompted on the device, tap **Allow** to authorize the computer
 
-Verify the devices are detected:
+Verify the host sees them:
 
 ```bash
 adb devices
 ```
 
-### Step 4: Start Batter
+### Step 3: Start Batter
 
 ```bash
 docker compose up -d
 ```
 
-This builds and starts everything:
+First start takes a few minutes to build. After that, starts are instant.
 
 | Container | What it does |
 |-----------|-------------|
-| **postgres** | PostgreSQL 16 database (data persisted in a Docker volume) |
-| **batter** | Go backend (port 8080) + Next.js frontend (port 3000) |
+| **postgres** | PostgreSQL 16 database, data persisted in a Docker volume |
+| **batter** | Go backend + Next.js frontend + scrcpy-server, all in one container |
 
 Database migrations are applied automatically on first start.
 
-### Step 5: Open the browser
+### Step 4: Open the browser
 
 Go to **http://localhost:3000**
 
-On first launch, you'll see a setup screen to create your **admin account**. After that, you can:
+On first launch you'll see a setup screen to create your **admin account**. After that:
 
 1. Click **Add Device** to register your connected Android devices
 2. Click a device card to start a live remote session
 3. Create **groups**, **users**, and **teams** from the sidebar
 
-### Stopping and restarting
+### Configuration
+
+All configuration is done via the `.env` file. You never need to edit `docker-compose.yml`.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `JWT_SECRET` | *(required)* | Secret for signing auth tokens. Generate with `openssl rand -hex 32` |
+| `POSTGRES_PASSWORD` | `batter` | Database password. Change this in production |
+| `POSTGRES_USER` | `batter` | Database username |
+| `POSTGRES_DB` | `batter` | Database name |
+| `BATTER_PORT` | `3000` | Port the app is accessible on |
+| `ALLOWED_ORIGINS` | `http://localhost:3000` | CORS origins (change if accessing from another host) |
+| `FRONTEND_URL` | `http://localhost:3000` | Frontend URL (change if accessing from another host) |
+
+**Accessing from another machine on the network:**
+
+```env
+BATTER_PORT=3000
+ALLOWED_ORIGINS=http://192.168.1.100:3000
+FRONTEND_URL=http://192.168.1.100:3000
+```
+
+**Changing the port:**
+
+```env
+BATTER_PORT=9000
+ALLOWED_ORIGINS=http://localhost:9000
+FRONTEND_URL=http://localhost:9000
+```
+
+### Managing the deployment
 
 ```bash
-# Stop everything
+# View logs
+docker compose logs -f
+
+# Stop everything (data is preserved)
 docker compose down
 
-# Start again (data is preserved)
+# Start again
 docker compose up -d
 
-# Stop and delete all data (fresh start)
+# Update to latest version
+git pull
+docker compose up -d --build
+
+# Full reset (deletes all data)
 docker compose down -v
 ```
 
-### Updating
+### Backups
+
+Database data is stored in the `pgdata` Docker volume. To back it up:
 
 ```bash
-git pull
-docker compose up -d --build
+# Dump the database
+docker compose exec postgres pg_dump -U batter batter > backup.sql
+
+# Restore from backup
+docker compose exec -T postgres psql -U batter batter < backup.sql
 ```
 
-### Custom port
+Screenshot cache is stored in the `batter_data` volume and is recreated automatically — no need to back it up.
 
-To change the frontend port (default 3000), update `docker-compose.yml`:
+### Putting behind a reverse proxy (HTTPS)
 
-```yaml
-ports:
-  - "8080:8080"
-  - "9000:3000"    # Access at http://localhost:9000
-environment:
-  ALLOWED_ORIGINS: http://localhost:9000
-  FRONTEND_URL: http://localhost:9000
+For production, put Batter behind a reverse proxy like Nginx or Caddy for HTTPS. Example with Caddy:
+
+```
+batter.example.com {
+    reverse_proxy localhost:3000
+}
+```
+
+Then update `.env`:
+
+```env
+ALLOWED_ORIGINS=https://batter.example.com
+FRONTEND_URL=https://batter.example.com
 ```
 
 ### Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
+| `JWT_SECRET is required` on start | You forgot to set `JWT_SECRET` in `.env`. Run `openssl rand -hex 32` and add it. |
 | `no devices found` after adding a device | Make sure USB debugging is enabled and the device authorized. Run `adb devices` on the host to verify. |
-| Container can't see USB devices | The container needs `privileged: true` and `/dev/bus/usb` mounted (both are set in `docker-compose.yml`). |
-| Database connection errors on startup | Wait a few seconds and retry — postgres needs time to initialize on first run. The healthcheck handles this automatically. |
-| `JWT_SECRET: change-me-in-production` warning | Set a proper secret in `docker-compose.yml` (see Step 2). |
+| Container can't see USB devices | The container needs `privileged: true` and `/dev/bus/usb` mounted (both set in `docker-compose.yml`). Reconnect the USB cable and retry. |
+| Database errors on first startup | Wait 10 seconds — postgres needs to initialize. The healthcheck handles this automatically. |
+| App works on localhost but not from other machines | Set `ALLOWED_ORIGINS` and `FRONTEND_URL` in `.env` to `http://YOUR_IP:3000`. |
 
 ---
 

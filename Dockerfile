@@ -16,9 +16,16 @@ COPY web/ .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
-# Stage 3: Production image
+# Stage 3: Download scrcpy-server
+FROM alpine:3.20 AS scrcpy-downloader
+ARG SCRCPY_VERSION=3.3.4
+RUN apk add --no-cache wget
+RUN wget -q -O /scrcpy-server \
+    "https://github.com/Genymobile/scrcpy/releases/download/v${SCRCPY_VERSION}/scrcpy-server-v${SCRCPY_VERSION}"
+
+# Stage 4: Production image
 FROM alpine:3.20
-RUN apk add --no-cache ca-certificates android-tools
+RUN apk add --no-cache ca-certificates android-tools nodejs
 
 WORKDIR /app
 
@@ -30,10 +37,13 @@ COPY --from=web-builder /app/.next/standalone /app/web/
 COPY --from=web-builder /app/.next/static /app/web/.next/static
 COPY --from=web-builder /app/public /app/web/public
 
-# Copy scripts
-COPY scripts/ /app/scripts/
+# Copy scrcpy-server
+COPY --from=scrcpy-downloader /scrcpy-server /usr/local/share/scrcpy/scrcpy-server
 
-EXPOSE 8080 3000
+# Create data directory
+RUN mkdir -p /app/data
+
+EXPOSE 3000 8080
 
 # Start both backend and frontend
 COPY <<'EOF' /app/start.sh

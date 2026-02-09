@@ -2,30 +2,28 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: batter
-      POSTGRES_PASSWORD: batter
-      POSTGRES_DB: batter
-    ports:
-      - "5433:5432"
+      POSTGRES_USER: ${POSTGRES_USER:-batter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-batter}
+      POSTGRES_DB: ${POSTGRES_DB:-batter}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./db/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U batter"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-batter}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   batter:
     build: .
     ports:
-      - "8080:8080"
-      - "3000:3000"
+      - "${BATTER_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgres://batter:batter@postgres:5432/batter?sslmode=disable
-      JWT_SECRET: change-me-in-production
-      ALLOWED_ORIGINS: http://localhost:3000
-      FRONTEND_URL: http://localhost:3000
+      DATABASE_URL: postgres://${POSTGRES_USER:-batter}:${POSTGRES_PASSWORD:-batter}@postgres:5432/${POSTGRES_DB:-batter}?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required - run: openssl rand -hex 32}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       PORT: "8080"
     depends_on:
       postgres:
@@ -33,7 +31,9 @@ services:
     privileged: true
     volumes:
       - /dev/bus/usb:/dev/bus/usb
+      - batter_data:/app/data
     restart: unless-stopped
 
 volumes:
   pgdata:
+  batter_data:
